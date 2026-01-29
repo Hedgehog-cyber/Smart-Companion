@@ -81,15 +81,14 @@ const StepItem = ({
             className="mt-1 md:mt-0"
           />
           <AccordionTrigger className="p-0 flex-1 hover:no-underline text-left">
-            <label
-              htmlFor={`step-${step.id}`}
+             <span
               className={cn(
-                "text-base md:text-lg font-medium transition-colors cursor-pointer",
+                "text-base md:text-lg font-medium transition-colors",
                 step.completed && "line-through text-muted-foreground"
               )}
             >
               {step.text}
-            </label>
+            </span>
           </AccordionTrigger>
           <Button
             variant="ghost"

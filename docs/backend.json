@@ -26,15 +26,60 @@
       },
       "required": [
         "id",
-        "email",
-        "name"
+        "email"
       ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a main task with its steps and sub-steps.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task, typically 'current_task'."
+        },
+        "mainTask": {
+          "type": "string",
+          "description": "The main description of the task."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of when the task was created."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "completed": { "type": "boolean" },
+              "subSteps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "text": { "type": "string" },
+                    "completed": { "type": "boolean" }
+                  },
+                  "required": ["id", "text", "completed"]
+                }
+              }
+            },
+            "required": ["id", "text", "completed", "subSteps"]
+          }
+        }
+      },
+      "required": ["id", "mainTask", "createdAt", "steps"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -46,7 +91,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile information. The document ID is the Firebase Auth UID. This enables path-based ownership, making security rules straightforward. No task-related data is stored here, preserving the application's privacy focus.",
+          "description": "Stores user profile information. The document ID is the Firebase Auth UID.",
           "params": [
             {
               "name": "userId",
@@ -54,8 +99,27 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores the user's tasks. The document ID is usually 'current_task'.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            },
+            {
+              "name": "taskId",
+              "description": "The ID of the task."
+            }
+          ]
+        }
       }
-    ],
-    "reasoning": "Given the privacy-first requirement of the Smart Companion application, storing data in IndexedDB is the primary method. However, to potentially support future features or user account management (even if initially minimal), a basic Firestore structure is proposed. This structure focuses on user identification and avoids storing any task-related data directly, adhering to the privacy constraint. The core concept is Authorization Independence. This structure ensures that security rules can be written without the need for `get()` calls, crucial for atomicity and scalability."
+    ]
   }
 }

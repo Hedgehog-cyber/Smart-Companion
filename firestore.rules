@@ -91,6 +91,11 @@ service cloud.firestore {
       allow create: if isOwner(userId) && hasValidInitialData(userId);
       allow update: if isExistingOwner(userId) && isIdImmutable();
       allow delete: if isExistingOwner(userId);
+      
+      // Allow users to manage their own tasks.
+      match /tasks/{taskId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
     }
   }
 }

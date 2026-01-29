@@ -2,10 +2,16 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getTask, saveTask, deleteTask as deleteTaskFromDB } from "@/lib/db";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
+import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import {
+  setDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+} from "@/firebase/non-blocking-updates";
+import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
 
 import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
@@ -13,18 +19,55 @@ import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
 
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
   const [task, setTask] = useState<Task | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isTaskLoading, setIsTaskLoading] = useState(true);
+
   const [isGenerating, startGeneratingTransition] = useTransition();
   const [isBreakingDown, startBreakingDownTransition] = useTransition();
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const taskDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, "users", user.uid, "tasks", "current_task");
+  }, [firestore, user]);
+
   useEffect(() => {
-    getTask()
-      .then((savedTask) => {
-        if (savedTask) {
-          setTask(savedTask);
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    if (user && firestore) {
+      const userDocRef = doc(firestore, 'users', user.uid);
+      getDoc(userDocRef).then(docSnap => {
+        if (!docSnap.exists()) {
+          const newUser = {
+            id: user.uid,
+            email: user.email,
+            name: user.displayName || user.email,
+          };
+          setDocumentNonBlocking(userDocRef, newUser, { merge: true });
+        }
+      });
+    }
+  }, [user, firestore]);
+
+  useEffect(() => {
+    if (!taskDocRef) return;
+
+    setIsTaskLoading(true);
+    const unsubscribe = getDoc(taskDocRef)
+      .then((docSnap) => {
+        if (docSnap.exists()) {
+          setTask(docSnap.data() as Task);
+        } else {
+          setTask(null);
         }
       })
       .catch((error) => {
@@ -32,18 +75,31 @@ export default function Home() {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not load your saved task. Please refresh the page.",
+          description: "Could not load your saved task.",
         });
       })
       .finally(() => {
-        setIsLoading(false);
+        setIsTaskLoading(false);
       });
-  }, [toast]);
+      
+    // Next line is a placeholder for a potential realtime listener in the future
+    const unsubListener = () => {};
 
-  const updateTask = async (updatedTask: Task) => {
-    setTask(updatedTask);
-    await saveTask(updatedTask);
+    return () => {
+      unsubListener();
+    };
+  }, [taskDocRef, toast]);
+
+
+  const updateTaskInDb = (updatedTask: Task | null) => {
+    if (!taskDocRef) return;
+    if (updatedTask === null) {
+      deleteDocumentNonBlocking(taskDocRef);
+    } else {
+      setDocumentNonBlocking(taskDocRef, updatedTask, { merge: true });
+    }
   };
+
 
   const handleCreateTask = async (data: { task: string }) => {
     startGeneratingTransition(async () => {
@@ -63,16 +119,23 @@ export default function Home() {
           })),
           createdAt: Date.now(),
         };
-        await updateTask(newTask);
+        setTask(newTask);
+        updateTaskInDb(newTask);
       } catch (error) {
         console.error("Failed to generate steps:", error);
         toast({
           variant: "destructive",
           title: "Generation Failed",
-          description: "The AI could not generate steps for this task. Please try a different one.",
+          description:
+            "The AI could not generate steps for this task. Please try a different one.",
         });
       }
     });
+  };
+  
+  const updateTask = (updatedTask: Task) => {
+    setTask(updatedTask);
+    updateTaskInDb(updatedTask);
   };
 
   const handleToggleStep = (stepId: string) => {
@@ -100,6 +163,7 @@ export default function Home() {
   };
 
   const handleBreakDown = (step: Step) => {
+    if (!task) return;
     setBreakingDownId(step.id);
     startBreakingDownTransition(async () => {
       try {
@@ -107,7 +171,6 @@ export default function Home() {
         if (!result || !result.subSteps || result.subSteps.length === 0) {
           throw new Error("AI failed to generate sub-steps.");
         }
-        if (!task) return;
         
         const newSubSteps: SubStep[] = result.subSteps.map(text => ({
           id: crypto.randomUUID(),
@@ -119,7 +182,7 @@ export default function Home() {
           s.id === step.id ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] } : s
         );
 
-        await updateTask({ ...task, steps: updatedSteps });
+        updateTask({ ...task, steps: updatedSteps });
 
       } catch (error) {
         console.error("Failed to break down step:", error);
@@ -148,12 +211,12 @@ export default function Home() {
   };
 
   const handleReset = async () => {
-    await deleteTaskFromDB();
     setTask(null);
+    updateTaskInDb(null);
     toast({ title: "Task reset.", description: "Ready for the next challenge!" });
   };
 
-  if (isLoading) {
+  if (isUserLoading || isTaskLoading) {
     return <PageSkeleton />;
   }
 
