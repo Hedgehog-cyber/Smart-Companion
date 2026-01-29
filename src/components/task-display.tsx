@@ -1,14 +1,26 @@
-"use client";
+'use client';
 
-import type { Task, Step, SubStep } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
-import { Loader2, Sparkles, Trash, Eraser } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Progress } from "./ui/progress";
-import { useMemo } from "react";
+import type { Task, Step, SubStep } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { Loader2, Sparkles, Trash, Eraser } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Progress } from './ui/progress';
+import { useMemo } from 'react';
 
 type TaskDisplayProps = {
   task: Task;
@@ -20,14 +32,14 @@ type TaskDisplayProps = {
   breakingDownId: string | null;
 };
 
-const StepItem = ({ 
-  step, 
+const StepItem = ({
+  step,
   onToggleStep,
   onToggleSubStep,
-  onBreakdown, 
-  isBreakingDown 
-}: { 
-  step: Step; 
+  onBreakdown,
+  isBreakingDown,
+}: {
+  step: Step;
   onToggleStep: (id: string) => void;
   onToggleSubStep: (stepId: string, subStepId: string) => void;
   onBreakdown: (step: Step) => void;
@@ -44,8 +56,8 @@ const StepItem = ({
       <label
         htmlFor={`step-${step.id}`}
         className={cn(
-          "flex-1 text-base md:text-lg font-medium transition-colors cursor-pointer",
-          step.completed && "line-through text-muted-foreground"
+          'flex-1 text-base md:text-lg font-medium transition-colors cursor-pointer',
+          step.completed && 'line-through text-muted-foreground'
         )}
       >
         {step.text}
@@ -71,42 +83,34 @@ const StepItem = ({
   }
 
   return (
-    <Accordion type="single" collapsible className="w-full border rounded-lg bg-card">
+    <Accordion
+      type="single"
+      collapsible
+      className="w-full border rounded-lg bg-card"
+    >
       <AccordionItem value={step.id} className="border-b-0">
-        <div className="flex items-start md:items-center gap-4 p-4">
+        <div className="flex items-start md:items-center p-4">
           <Checkbox
             id={`step-${step.id}`}
             checked={step.completed}
             onCheckedChange={() => onToggleStep(step.id)}
             className="mt-1 md:mt-0"
           />
-          <AccordionTrigger className="p-0 flex-1 hover:no-underline text-left">
-             <span
+          <AccordionTrigger className="flex-1 p-0 ml-4 hover:no-underline text-left">
+            <label
+              htmlFor={`step-${step.id}`}
               className={cn(
-                "text-base md:text-lg font-medium transition-colors",
-                step.completed && "line-through text-muted-foreground"
+                'text-base md:text-lg font-medium transition-colors cursor-pointer',
+                step.completed && 'line-through text-muted-foreground'
               )}
             >
               {step.text}
-            </span>
+            </label>
           </AccordionTrigger>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onBreakdown(step)}
-            disabled={isBreakingDown || step.completed}
-            aria-label="Break this step down further"
-          >
-            {isBreakingDown ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-            )}
-          </Button>
         </div>
         <AccordionContent className="px-4 pb-4">
           <div className="space-y-3 pl-12 border-l-2 ml-2">
-            {step.subSteps.map(subStep => (
+            {step.subSteps.map((subStep) => (
               <div key={subStep.id} className="flex items-center gap-4 pl-4">
                 <Checkbox
                   id={`substep-${subStep.id}`}
@@ -116,20 +120,37 @@ const StepItem = ({
                 <label
                   htmlFor={`substep-${subStep.id}`}
                   className={cn(
-                    "flex-1 text-sm font-medium transition-colors cursor-pointer",
-                    subStep.completed && "line-through text-muted-foreground"
+                    'flex-1 text-sm font-medium transition-colors cursor-pointer',
+                    subStep.completed && 'line-through text-muted-foreground'
                   )}
                 >
                   {subStep.text}
                 </label>
               </div>
             ))}
+             <div className="pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onBreakdown(step)}
+                disabled={isBreakingDown || step.completed}
+                aria-label="Break this step down further"
+                className="gap-2"
+              >
+                {isBreakingDown ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+                )}
+                <span>Break down further</span>
+              </Button>
+            </div>
           </div>
         </AccordionContent>
       </AccordionItem>
     </Accordion>
   );
-}
+};
 
 export function TaskDisplay({
   task,
@@ -141,12 +162,15 @@ export function TaskDisplay({
   breakingDownId,
 }: TaskDisplayProps) {
   const { progress, allStepsCount } = useMemo(() => {
-    const allSteps = task.steps.flatMap(s => [s, ...s.subSteps]);
-    const completedStepsCount = allSteps.filter(s => s.completed).length;
+    const allSteps = task.steps.flatMap((s) => [s, ...s.subSteps]);
+    const completedStepsCount = allSteps.filter((s) => s.completed).length;
     return {
-      progress: allSteps.length > 0 ? (completedStepsCount / allSteps.length) * 100 : 0,
-      allStepsCount: allSteps.length
-    }
+      progress:
+        allSteps.length > 0
+          ? (completedStepsCount / allSteps.length) * 100
+          : 0,
+      allStepsCount: allSteps.length,
+    };
   }, [task]);
 
   return (
@@ -165,17 +189,19 @@ export function TaskDisplay({
       <CardContent className="space-y-4">
         {task.steps.length > 0 ? (
           task.steps.map((step) => (
-            <StepItem 
-              key={step.id} 
-              step={step} 
-              onToggleStep={onToggleStep} 
+            <StepItem
+              key={step.id}
+              step={step}
+              onToggleStep={onToggleStep}
               onToggleSubStep={onToggleSubStep}
-              onBreakdown={onBreakdown} 
+              onBreakdown={onBreakdown}
               isBreakingDown={breakingDownId === step.id}
             />
           ))
         ) : (
-          <p className="text-muted-foreground text-center py-8">No steps yet. Looks like you're all done!</p>
+          <p className="text-muted-foreground text-center py-8">
+            No steps yet. Looks like you're all done!
+          </p>
         )}
       </CardContent>
       <CardFooter className="flex flex-col-reverse sm:flex-row justify-end gap-2">
