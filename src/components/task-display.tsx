@@ -73,7 +73,38 @@ const StepItem = ({
   return (
     <Accordion type="single" collapsible className="w-full border rounded-lg bg-card">
       <AccordionItem value={step.id} className="border-b-0">
-        <AccordionTrigger className="p-4 hover:no-underline">{content}</AccordionTrigger>
+        <div className="flex items-start md:items-center gap-4 p-4">
+          <Checkbox
+            id={`step-${step.id}`}
+            checked={step.completed}
+            onCheckedChange={() => onToggleStep(step.id)}
+            className="mt-1 md:mt-0"
+          />
+          <AccordionTrigger className="p-0 flex-1 hover:no-underline text-left">
+            <label
+              htmlFor={`step-${step.id}`}
+              className={cn(
+                "text-base md:text-lg font-medium transition-colors cursor-pointer",
+                step.completed && "line-through text-muted-foreground"
+              )}
+            >
+              {step.text}
+            </label>
+          </AccordionTrigger>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onBreakdown(step)}
+            disabled={isBreakingDown || step.completed}
+            aria-label="Break this step down further"
+          >
+            {isBreakingDown ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+            )}
+          </Button>
+        </div>
         <AccordionContent className="px-4 pb-4">
           <div className="space-y-3 pl-12 border-l-2 ml-2">
             {step.subSteps.map(subStep => (
