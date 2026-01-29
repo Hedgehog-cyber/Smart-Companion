@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Smart Companion application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "googleId": {
+          "type": "string",
+          "description": "The user's Google ID (if they signed up with Google). Null if they didn't."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. The document ID is the Firebase Auth UID. This enables path-based ownership, making security rules straightforward. No task-related data is stored here, preserving the application's privacy focus.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Given the privacy-first requirement of the Smart Companion application, storing data in IndexedDB is the primary method. However, to potentially support future features or user account management (even if initially minimal), a basic Firestore structure is proposed. This structure focuses on user identification and avoids storing any task-related data directly, adhering to the privacy constraint. The core concept is Authorization Independence. This structure ensures that security rules can be written without the need for `get()` calls, crucial for atomicity and scalability."
+  }
+}
