@@ -1,3 +1,180 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { getTask, saveTask, deleteTask as deleteTaskFromDB } from "@/lib/db";
+import type { Task, Step, SubStep } from "@/lib/types";
+import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
+import { breakDownFurther } from "@/ai/flows/break-down-further";
+
+import { AppHeader } from "@/components/app-header";
+import { TaskInput } from "@/components/task-input";
+import { TaskDisplay } from "@/components/task-display";
+import { PageSkeleton } from "@/components/page-skeleton";
+
 export default function Home() {
-  return <></>;
+  const [task, setTask] = useState<Task | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, startGeneratingTransition] = useTransition();
+  const [isBreakingDown, startBreakingDownTransition] = useTransition();
+  const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    getTask()
+      .then((savedTask) => {
+        if (savedTask) {
+          setTask(savedTask);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load task from DB:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load your saved task. Please refresh the page.",
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [toast]);
+
+  const updateTask = async (updatedTask: Task) => {
+    setTask(updatedTask);
+    await saveTask(updatedTask);
+  };
+
+  const handleCreateTask = async (data: { task: string }) => {
+    startGeneratingTransition(async () => {
+      try {
+        const result = await generateMicroWinSteps({ task: data.task });
+        if (!result || !result.steps || result.steps.length === 0) {
+          throw new Error("AI failed to generate steps.");
+        }
+        const newTask: Task = {
+          id: "current_task",
+          mainTask: data.task,
+          steps: result.steps.map((stepText) => ({
+            id: crypto.randomUUID(),
+            text: stepText,
+            completed: false,
+            subSteps: [],
+          })),
+          createdAt: Date.now(),
+        };
+        await updateTask(newTask);
+      } catch (error) {
+        console.error("Failed to generate steps:", error);
+        toast({
+          variant: "destructive",
+          title: "Generation Failed",
+          description: "The AI could not generate steps for this task. Please try a different one.",
+        });
+      }
+    });
+  };
+
+  const handleToggleStep = (stepId: string) => {
+    if (!task) return;
+    const updatedSteps = task.steps.map((step) =>
+      step.id === stepId ? { ...step, completed: !step.completed } : step
+    );
+    updateTask({ ...task, steps: updatedSteps });
+  };
+
+  const handleToggleSubStep = (stepId: string, subStepId: string) => {
+    if (!task) return;
+    const updatedSteps = task.steps.map((step) => {
+      if (step.id === stepId) {
+        const updatedSubSteps = step.subSteps.map((subStep) =>
+          subStep.id === subStepId
+            ? { ...subStep, completed: !subStep.completed }
+            : subStep
+        );
+        return { ...step, subSteps: updatedSubSteps };
+      }
+      return step;
+    });
+    updateTask({ ...task, steps: updatedSteps });
+  };
+
+  const handleBreakDown = (step: Step) => {
+    setBreakingDownId(step.id);
+    startBreakingDownTransition(async () => {
+      try {
+        const result = await breakDownFurther({ task: step.text });
+        if (!result || !result.subSteps || result.subSteps.length === 0) {
+          throw new Error("AI failed to generate sub-steps.");
+        }
+        if (!task) return;
+        
+        const newSubSteps: SubStep[] = result.subSteps.map(text => ({
+          id: crypto.randomUUID(),
+          text,
+          completed: false,
+        }));
+
+        const updatedSteps = task.steps.map(s => 
+          s.id === step.id ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] } : s
+        );
+
+        await updateTask({ ...task, steps: updatedSteps });
+
+      } catch (error) {
+        console.error("Failed to break down step:", error);
+        toast({
+          variant: "destructive",
+          title: "Breakdown Failed",
+          description: "The AI could not break this step down further. Please try again.",
+        });
+      } finally {
+        setBreakingDownId(null);
+      }
+    });
+  };
+  
+  const handleClearCompleted = () => {
+    if (!task) return;
+    const activeSteps = task.steps
+      .map(step => ({
+        ...step,
+        subSteps: step.subSteps.filter(sub => !sub.completed),
+      }))
+      .filter(step => !step.completed);
+
+    updateTask({ ...task, steps: activeSteps });
+    toast({ title: "Completed steps cleared!" });
+  };
+
+  const handleReset = async () => {
+    await deleteTaskFromDB();
+    setTask(null);
+    toast({ title: "Task reset.", description: "Ready for the next challenge!" });
+  };
+
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  return (
+    <main className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20">
+      <AppHeader />
+      <div className="w-full max-w-2xl mt-8">
+        {!task ? (
+          <TaskInput onSubmit={handleCreateTask} isPending={isGenerating} />
+        ) : (
+          <TaskDisplay
+            task={task}
+            onToggleStep={handleToggleStep}
+            onToggleSubStep={handleToggleSubStep}
+            onBreakdown={handleBreakDown}
+            onClearCompleted={handleClearCompleted}
+            onReset={handleReset}
+            breakingDownId={isBreakingDown ? breakingDownId : null}
+          />
+        )}
+      </div>
+    </main>
+  );
 }
