@@ -10,25 +10,18 @@ interface DopamineCounterProps {
 
 export function DopamineCounter({ count }: DopamineCounterProps) {
   const [showStreak, setShowStreak] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const prevCountRef = useRef(count);
 
   useEffect(() => {
-    // Only animate and check for streak when the count increases
+    // Only check for streak when the count increases
     if (count > prevCountRef.current) {
-      setIsAnimating(true);
-      const animationTimer = setTimeout(() => setIsAnimating(false), 500); // Must match animation duration
-
       if (count > 0 && count % 5 === 0) {
         setShowStreak(true);
         const streakTimer = setTimeout(() => setShowStreak(false), 2500); // Show for 2.5 seconds
         return () => {
-          clearTimeout(animationTimer);
           clearTimeout(streakTimer);
         };
       }
-      
-      return () => clearTimeout(animationTimer);
     }
 
     prevCountRef.current = count;
@@ -37,10 +30,7 @@ export function DopamineCounter({ count }: DopamineCounterProps) {
   return (
     <div className="relative flex justify-center my-6">
       <div
-        className={cn(
-          'text-lg font-bold text-center px-4 py-2 rounded-lg transition-all',
-          isAnimating && 'animate-pop-flash'
-        )}
+        className='text-lg font-bold text-center px-4 py-2 rounded-lg transition-all'
       >
         Total Micro-Wins: {count}
       </div>

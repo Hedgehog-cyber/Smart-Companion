@@ -13,6 +13,7 @@ import { TaskInput } from "@/components/task-input";
 import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { DopamineCounter } from "@/components/dopamine-counter";
+import { cn } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
@@ -29,12 +30,15 @@ export default function Home() {
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevWinsRef = useRef(completedWins);
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
-  
+
   useEffect(() => {
     setIsTaskLoading(true);
     try {
@@ -43,11 +47,12 @@ export default function Home() {
         const savedTask = JSON.parse(savedTaskJson) as Task;
         setTask(savedTask);
         const initialWins = savedTask.steps.reduce((acc, step) => {
-            if (step.completed) acc++;
-            acc += step.subSteps.filter(sub => sub.completed).length;
-            return acc;
+          if (step.completed) acc++;
+          acc += step.subSteps.filter((sub) => sub.completed).length;
+          return acc;
         }, 0);
         setCompletedWins(initialWins);
+        prevWinsRef.current = initialWins;
       }
     } catch (error) {
       console.error("Failed to load task from localStorage:", error);
@@ -61,22 +66,30 @@ export default function Home() {
     }
   }, [toast]);
 
+  useEffect(() => {
+    if (completedWins > prevWinsRef.current) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 400); // must match animation duration
+      return () => clearTimeout(timer);
+    }
+    prevWinsRef.current = completedWins;
+  }, [completedWins]);
 
   const updateTaskAndSave = (updatedTask: Task | null) => {
     setTask(updatedTask);
     try {
-        if (updatedTask) {
-            const totalWins = updatedTask.steps.reduce((acc, step) => {
-                if (step.completed) acc++;
-                acc += step.subSteps.filter(sub => sub.completed).length;
-                return acc;
-            }, 0);
-            setCompletedWins(totalWins);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
-        } else {
-            setCompletedWins(0);
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
-        }
+      if (updatedTask) {
+        const totalWins = updatedTask.steps.reduce((acc, step) => {
+          if (step.completed) acc++;
+          acc += step.subSteps.filter((sub) => sub.completed).length;
+          return acc;
+        }, 0);
+        setCompletedWins(totalWins);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
+      } else {
+        setCompletedWins(0);
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
     } catch (error) {
       console.error("Failed to save task to localStorage:", error);
       toast({
@@ -86,7 +99,6 @@ export default function Home() {
       });
     }
   };
-
 
   const handleCreateTask = async (data: { task: string }) => {
     startGeneratingTransition(async () => {
@@ -118,7 +130,7 @@ export default function Home() {
       }
     });
   };
-  
+
   const handleToggleStep = (stepId: string) => {
     if (!task) return;
     const updatedSteps = task.steps.map((step) =>
@@ -152,40 +164,42 @@ export default function Home() {
         if (!result || !result.subSteps || result.subSteps.length === 0) {
           throw new Error("AI failed to generate sub-steps.");
         }
-        
-        const newSubSteps: SubStep[] = result.subSteps.map(text => ({
+
+        const newSubSteps: SubStep[] = result.subSteps.map((text) => ({
           id: crypto.randomUUID(),
           text,
           completed: false,
         }));
 
-        const updatedSteps = task.steps.map(s => 
-          s.id === step.id ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] } : s
+        const updatedSteps = task.steps.map((s) =>
+          s.id === step.id
+            ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] }
+            : s
         );
 
         updateTaskAndSave({ ...task, steps: updatedSteps });
-
       } catch (error) {
         console.error("Failed to break down step:", error);
         toast({
           variant: "destructive",
           title: "Breakdown Failed",
-          description: "The AI could not break this step down further. Please try again.",
+          description:
+            "The AI could not break this step down further. Please try again.",
         });
       } finally {
         setBreakingDownId(null);
       }
     });
   };
-  
+
   const handleClearCompleted = () => {
     if (!task) return;
     const activeSteps = task.steps
-      .map(step => ({
+      .map((step) => ({
         ...step,
-        subSteps: step.subSteps.filter(sub => !sub.completed),
+        subSteps: step.subSteps.filter((sub) => !sub.completed),
       }))
-      .filter(step => !step.completed);
+      .filter((step) => !step.completed);
 
     updateTaskAndSave({ ...task, steps: activeSteps });
     toast({ title: "Completed steps cleared!" });
@@ -193,7 +207,10 @@ export default function Home() {
 
   const handleReset = async () => {
     updateTaskAndSave(null);
-    toast({ title: "Task reset.", description: "Ready for the next challenge!" });
+    toast({
+      title: "Task reset.",
+      description: "Ready for the next challenge!",
+    });
   };
 
   if (isUserLoading || isTaskLoading) {
@@ -201,7 +218,12 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20">
+    <main
+      className={cn(
+        "flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20 transition-colors",
+        isAnimating && "animate-page-pop"
+      )}
+    >
       <AppHeader />
       <DopamineCounter count={completedWins} />
       <div className="w-full max-w-2xl">
