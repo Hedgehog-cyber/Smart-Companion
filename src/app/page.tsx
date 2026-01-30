@@ -5,12 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
-import { useUser, useFirestore } from "@/firebase";
-import {
-  setDocumentNonBlocking,
-} from "@/firebase/non-blocking-updates";
+import { useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
 
 import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
@@ -21,7 +17,6 @@ const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const router = useRouter();
 
   const [task, setTask] = useState<Task | null>(null);
@@ -37,22 +32,6 @@ export default function Home() {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
-
-  useEffect(() => {
-    if (user && firestore) {
-      const userDocRef = doc(firestore, 'users', user.uid);
-      getDoc(userDocRef).then(docSnap => {
-        if (!docSnap.exists()) {
-          const newUser = {
-            id: user.uid,
-            email: user.email,
-            name: user.displayName || user.email,
-          };
-          setDocumentNonBlocking(userDocRef, newUser, { merge: true });
-        }
-      });
-    }
-  }, [user, firestore]);
   
   useEffect(() => {
     setIsTaskLoading(true);

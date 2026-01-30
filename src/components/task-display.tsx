@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/accordion';
 import { Progress } from './ui/progress';
 import { useMemo } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type TaskDisplayProps = {
   task: Task;
@@ -45,6 +46,31 @@ const StepItem = ({
   onBreakdown: (step: Step) => void;
   isBreakingDown: boolean;
 }) => {
+  const breakdownButton = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onBreakdown(step)}
+            disabled={isBreakingDown || step.completed}
+            aria-label="Break this step down further"
+          >
+            {isBreakingDown ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Still too hard?</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
   const content = (
     <div className="flex items-start md:items-center gap-4">
       <Checkbox
@@ -62,19 +88,7 @@ const StepItem = ({
       >
         {step.text}
       </label>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onBreakdown(step)}
-        disabled={isBreakingDown || step.completed}
-        aria-label="Break this step down further"
-      >
-        {isBreakingDown ? (
-          <Loader2 className="animate-spin" />
-        ) : (
-          <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-        )}
-      </Button>
+      {breakdownButton}
     </div>
   );
 
@@ -97,15 +111,14 @@ const StepItem = ({
             className="mt-1 md:mt-0"
           />
           <AccordionTrigger className="flex-1 p-0 ml-4 hover:no-underline text-left">
-            <label
-              htmlFor={`step-${step.id}`}
+            <span
               className={cn(
-                'text-base md:text-lg font-medium transition-colors cursor-pointer',
+                'text-base md:text-lg font-medium transition-colors',
                 step.completed && 'line-through text-muted-foreground'
               )}
             >
               {step.text}
-            </label>
+            </span>
           </AccordionTrigger>
         </div>
         <AccordionContent className="px-4 pb-4">

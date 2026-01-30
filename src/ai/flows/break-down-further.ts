@@ -29,11 +29,7 @@ const prompt = ai.definePrompt({
   name: 'breakDownFurtherPrompt',
   input: {schema: BreakDownFurtherInputSchema},
   output: {schema: BreakDownFurtherOutputSchema},
-  prompt: `You are an expert task manager. Given a task, you will break it down into more granular sub-steps.
-
-Task: {{{task}}}
-
-Sub-steps:`,
+  prompt: `The user is stuck on this specific step: {{{task}}}. Please break this down into 3 even smaller, five-second physical actions.`,
 });
 
 const breakDownFurtherFlow = ai.defineFlow(
