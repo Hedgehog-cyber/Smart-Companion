@@ -70,6 +70,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     recognition.interimResults = false;
 
     recognition.onstart = () => {
+      console.log('Listening...');
       setIsListening(true);
     };
 
@@ -78,18 +79,19 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     };
 
     recognition.onerror = (event: any) => {
-      let description = `An error occurred: ${event.error}`;
       if (event.error === 'not-allowed') {
-        description =
-          'Microphone access was denied. Please allow microphone access in your browser settings.';
-      } else if (event.error === 'no-speech') {
-        description = 'No speech was detected. Please try again.';
+        toast({
+          variant: 'destructive',
+          title: 'Microphone blocked',
+          description: 'Please allow access in your browser bar.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Speech Recognition Error',
+          description: `An error occurred: ${event.error}`,
+        });
       }
-      toast({
-        variant: "destructive",
-        title: "Speech Recognition Error",
-        description,
-      });
       setIsListening(false);
     };
 
