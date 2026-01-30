@@ -3,7 +3,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, Mic, MicOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,17 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+
+// Extend window type for speech recognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 const formSchema = z.object({
   task: z.string().min(10, {
@@ -35,6 +47,68 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
       task: "",
     },
   });
+  
+  const { toast } = useToast();
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      // Silently disable if not supported, button will be disabled.
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      toast({
+        variant: "destructive",
+        title: "Speech Recognition Error",
+        description: event.error === 'not-allowed' ? 'Microphone access was denied.' : `An error occurred: ${event.error}`,
+      });
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      form.setValue('task', transcript);
+    };
+    
+    recognitionRef.current = recognition;
+
+  }, [form, toast]);
+
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error("Speech recognition start error:", error)
+        toast({
+            variant: "destructive",
+            title: "Could not start listening",
+            description: "Please try again.",
+        })
+      }
+    }
+  };
 
   return (
     <Card className="w-full animate-fade-in">
@@ -54,11 +128,27 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 <FormItem>
                   <FormLabel className="sr-only">What task is overwhelming you right now?</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="e.g., 'Clean the entire house' or 'Finish my project report'"
-                      className="min-h-[120px] text-base resize-none"
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Textarea
+                        placeholder="e.g., 'Clean the entire house' or click the mic to speak"
+                        className="min-h-[120px] text-base resize-none pr-12"
+                        {...field}
+                      />
+                       <Button 
+                         type="button"
+                         size="icon"
+                         variant="ghost"
+                         onClick={handleMicClick}
+                         disabled={!recognitionRef.current}
+                         className={cn(
+                           "absolute top-3 right-3 text-muted-foreground hover:text-foreground",
+                           isListening && "text-primary animate-pulse"
+                         )}
+                       >
+                         {isListening ? <MicOff /> : <Mic />}
+                         <span className="sr-only">{isListening ? 'Stop listening' : 'Start listening'}</span>
+                       </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
