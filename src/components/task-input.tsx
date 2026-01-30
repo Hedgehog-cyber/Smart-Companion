@@ -131,21 +131,25 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                     <div className="relative">
                       <Textarea
                         placeholder="e.g., 'Clean the entire house' or click the mic to speak"
-                        className="min-h-[120px] text-base resize-none pr-12"
+                        className="min-h-[120px] text-base resize-none pr-14"
                         {...field}
                       />
                        <Button 
                          type="button"
                          size="icon"
-                         variant="ghost"
+                         variant="secondary"
                          onClick={handleMicClick}
                          disabled={!recognitionRef.current}
                          className={cn(
-                           "absolute top-3 right-3 text-muted-foreground hover:text-foreground",
-                           isListening && "text-primary animate-pulse"
+                           "absolute top-2.5 right-2.5",
+                           isListening && "bg-primary/20 text-primary animate-pulse"
                          )}
                        >
-                         {isListening ? <MicOff /> : <Mic />}
+                         {isListening ? (
+                            <MicOff className="h-5 w-5" />
+                         ) : (
+                            <Mic className="h-5 w-5" />
+                         )}
                          <span className="sr-only">{isListening ? 'Stop listening' : 'Start listening'}</span>
                        </Button>
                     </div>
