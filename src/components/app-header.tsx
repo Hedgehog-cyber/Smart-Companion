@@ -4,6 +4,14 @@ import { BrainCircuit, LogOut } from 'lucide-react';
 import { useAuth, useUser, initiateSignOut } from '@/firebase';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function AppHeader() {
   const auth = useAuth();
@@ -15,7 +23,7 @@ export function AppHeader() {
     }
   };
 
-  const userInitial = user?.email?.charAt(0).toUpperCase() || "U";
+  const userInitial = user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U";
 
   return (
     <header className="w-full max-w-4xl text-center relative">
@@ -30,18 +38,36 @@ export function AppHeader() {
       </p>
 
       {user && (
-        <div className="absolute top-0 right-0 flex items-center gap-4">
-           <div className="text-right">
-             <p className="text-sm font-medium">{user.displayName || user.email}</p>
-          </div>
-          <Avatar>
-            <AvatarImage src={user.photoURL || undefined} alt="User avatar" />
-            <AvatarFallback>{userInitial}</AvatarFallback>
-          </Avatar>
-          <Button variant="ghost" size="icon" onClick={handleSignOut}>
-            <LogOut className="h-5 w-5" />
-            <span className="sr-only">Sign out</span>
-          </Button>
+        <div className="absolute top-0 right-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
+                <Avatar>
+                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User Avatar'} />
+                  <AvatarFallback>{userInitial}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user.displayName || user.email}
+                  </p>
+                  {user.displayName && user.email && (
+                     <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                     </p>
+                  )}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </header>
