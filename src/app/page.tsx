@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition, useRef } from "react";
+import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, getTaskRef, saveTask, deleteTask } from "@/firebase";
 import { useRouter } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
@@ -16,15 +16,12 @@ import { DopamineCounter } from "@/components/dopamine-counter";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "@/components/sparkles";
 
-const LOCAL_STORAGE_KEY = "smart_companion_tasks";
-
 export default function Home() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
-  const [task, setTask] = useState<Task | null>(null);
   const [completedWins, setCompletedWins] = useState(0);
-  const [isTaskLoading, setIsTaskLoading] = useState(true);
 
   const [isGenerating, startGeneratingTransition] = useTransition();
   const [isBreakingDown, startBreakingDownTransition] = useTransition();
@@ -34,6 +31,24 @@ export default function Home() {
   const [isAnimating, setIsAnimating] = useState(false);
   const prevWinsRef = useRef(completedWins);
 
+  const taskRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return getTaskRef(firestore, user.uid);
+  }, [firestore, user]);
+
+  const { data: task, isLoading: isTaskLoading, error: taskError } = useDoc<Task>(taskRef);
+
+  useEffect(() => {
+    if (taskError) {
+      console.error("Error loading task:", taskError);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load your task.",
+      });
+    }
+  }, [taskError, toast]);
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
@@ -41,31 +56,18 @@ export default function Home() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    setIsTaskLoading(true);
-    try {
-      const savedTaskJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedTaskJson) {
-        const savedTask = JSON.parse(savedTaskJson) as Task;
-        setTask(savedTask);
-        const initialWins = savedTask.steps.reduce((acc, step) => {
-          if (step.completed) acc++;
-          acc += step.subSteps.filter((sub) => sub.completed).length;
-          return acc;
-        }, 0);
-        setCompletedWins(initialWins);
-        prevWinsRef.current = initialWins;
-      }
-    } catch (error) {
-      console.error("Failed to load task from localStorage:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not load your saved task.",
-      });
-    } finally {
-      setIsTaskLoading(false);
+    if (task) {
+      const initialWins = task.steps.reduce((acc, step) => {
+        if (step.completed) acc++;
+        acc += step.subSteps.filter((sub) => sub.completed).length;
+        return acc;
+      }, 0);
+      setCompletedWins(initialWins);
+    } else {
+      setCompletedWins(0);
     }
-  }, [toast]);
+  }, [task]);
+
 
   useEffect(() => {
     if (completedWins > prevWinsRef.current) {
@@ -75,28 +77,28 @@ export default function Home() {
     }
     prevWinsRef.current = completedWins;
   }, [completedWins]);
+  
+  useEffect(() => {
+    if (!isTaskLoading) {
+      prevWinsRef.current = completedWins;
+    }
+  }, [isTaskLoading, completedWins]);
+
 
   const updateTaskAndSave = (updatedTask: Task | null) => {
-    setTask(updatedTask);
+    if (!taskRef) return;
     try {
       if (updatedTask) {
-        const totalWins = updatedTask.steps.reduce((acc, step) => {
-          if (step.completed) acc++;
-          acc += step.subSteps.filter((sub) => sub.completed).length;
-          return acc;
-        }, 0);
-        setCompletedWins(totalWins);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
+        saveTask(taskRef, updatedTask);
       } else {
-        setCompletedWins(0);
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        deleteTask(taskRef);
       }
     } catch (error) {
-      console.error("Failed to save task to localStorage:", error);
+      console.error("Failed to save task to Firestore:", error);
       toast({
         variant: "destructive",
         title: "Error saving task",
-        description: "Your task could not be saved to the local storage.",
+        description: "Your task could not be saved.",
       });
     }
   };
