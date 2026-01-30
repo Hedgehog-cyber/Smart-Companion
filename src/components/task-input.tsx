@@ -141,7 +141,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                          onClick={handleMicClick}
                          disabled={!recognitionRef.current}
                          className={cn(
-                           "absolute top-2.5 right-2.5",
+                           "absolute top-2.5 right-2.5 z-10",
                            isListening && "bg-primary/20 text-primary animate-pulse"
                          )}
                        >
