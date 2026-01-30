@@ -128,44 +128,43 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 <FormItem>
                   <FormLabel className="sr-only">What task is overwhelming you right now?</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Textarea
-                        placeholder="e.g., 'Clean the entire house' or click the mic to speak"
-                        className="min-h-[120px] text-base resize-none pr-14"
-                        {...field}
-                      />
-                       <Button 
-                         type="button"
-                         size="icon"
-                         variant="secondary"
-                         onClick={handleMicClick}
-                         disabled={!recognitionRef.current}
-                         className={cn(
-                           "absolute top-2.5 right-2.5 z-10",
-                           isListening && "bg-primary/20 text-primary animate-pulse"
-                         )}
-                       >
-                         {isListening ? (
-                            <MicOff className="h-5 w-5" />
-                         ) : (
-                            <Mic className="h-5 w-5" />
-                         )}
-                         <span className="sr-only">{isListening ? 'Stop listening' : 'Start listening'}</span>
-                       </Button>
-                    </div>
+                    <Textarea
+                      placeholder="e.g., 'Clean the entire house' or use the mic to speak"
+                      className="min-h-[120px] text-base resize-none"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending} className="w-full" size="lg">
-              {isPending ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Wand2 />
-              )}
-              <span>{isPending ? "Generating steps..." : "Break It Down"}</span>
-            </Button>
+            <div className="flex items-stretch gap-2">
+              <Button type="submit" disabled={isPending} className="flex-1" size="lg">
+                {isPending ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Wand2 />
+                )}
+                <span>{isPending ? "Generating steps..." : "Break It Down"}</span>
+              </Button>
+              <Button 
+                type="button"
+                size="lg"
+                variant="secondary"
+                onClick={handleMicClick}
+                disabled={!recognitionRef.current || isPending}
+                className={cn(
+                  isListening && "bg-primary/20 text-primary animate-pulse"
+                )}
+                aria-label={isListening ? 'Stop listening' : 'Start listening'}
+              >
+                {isListening ? (
+                   <MicOff className="h-5 w-5" />
+                ) : (
+                   <Mic className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
