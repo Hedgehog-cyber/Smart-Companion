@@ -5,10 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
-import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import {
   setDocumentNonBlocking,
-  deleteDocumentNonBlocking,
 } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
@@ -17,6 +16,8 @@ import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
 import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
+
+const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -30,11 +31,6 @@ export default function Home() {
   const [isBreakingDown, startBreakingDownTransition] = useTransition();
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
-
-  const taskDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, "users", user.uid, "tasks", "current_task");
-  }, [firestore, user]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -57,46 +53,43 @@ export default function Home() {
       });
     }
   }, [user, firestore]);
-
+  
   useEffect(() => {
-    if (!taskDocRef) return;
-
     setIsTaskLoading(true);
-    const unsubscribe = getDoc(taskDocRef)
-      .then((docSnap) => {
-        if (docSnap.exists()) {
-          setTask(docSnap.data() as Task);
-        } else {
-          setTask(null);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load task from DB:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load your saved task.",
-        });
-      })
-      .finally(() => {
-        setIsTaskLoading(false);
+    try {
+      const savedTaskJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedTaskJson) {
+        const savedTask = JSON.parse(savedTaskJson);
+        setTask(savedTask);
+      }
+    } catch (error) {
+      console.error("Failed to load task from localStorage:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load your saved task.",
       });
-      
-    // Next line is a placeholder for a potential realtime listener in the future
-    const unsubListener = () => {};
-
-    return () => {
-      unsubListener();
-    };
-  }, [taskDocRef, toast]);
+    } finally {
+      setIsTaskLoading(false);
+    }
+  }, [toast]);
 
 
-  const updateTaskInDb = (updatedTask: Task | null) => {
-    if (!taskDocRef) return;
-    if (updatedTask === null) {
-      deleteDocumentNonBlocking(taskDocRef);
-    } else {
-      setDocumentNonBlocking(taskDocRef, updatedTask, { merge: true });
+  const updateTaskAndSave = (updatedTask: Task | null) => {
+    setTask(updatedTask);
+    try {
+        if (updatedTask) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
+        } else {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+    } catch (error) {
+      console.error("Failed to save task to localStorage:", error);
+      toast({
+        variant: "destructive",
+        title: "Error saving task",
+        description: "Your task could not be saved to the local storage.",
+      });
     }
   };
 
@@ -119,8 +112,7 @@ export default function Home() {
           })),
           createdAt: Date.now(),
         };
-        setTask(newTask);
-        updateTaskInDb(newTask);
+        updateTaskAndSave(newTask);
       } catch (error) {
         console.error("Failed to generate steps:", error);
         toast({
@@ -133,17 +125,12 @@ export default function Home() {
     });
   };
   
-  const updateTask = (updatedTask: Task) => {
-    setTask(updatedTask);
-    updateTaskInDb(updatedTask);
-  };
-
   const handleToggleStep = (stepId: string) => {
     if (!task) return;
     const updatedSteps = task.steps.map((step) =>
       step.id === stepId ? { ...step, completed: !step.completed } : step
     );
-    updateTask({ ...task, steps: updatedSteps });
+    updateTaskAndSave({ ...task, steps: updatedSteps });
   };
 
   const handleToggleSubStep = (stepId: string, subStepId: string) => {
@@ -159,7 +146,7 @@ export default function Home() {
       }
       return step;
     });
-    updateTask({ ...task, steps: updatedSteps });
+    updateTaskAndSave({ ...task, steps: updatedSteps });
   };
 
   const handleBreakDown = (step: Step) => {
@@ -182,7 +169,7 @@ export default function Home() {
           s.id === step.id ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] } : s
         );
 
-        updateTask({ ...task, steps: updatedSteps });
+        updateTaskAndSave({ ...task, steps: updatedSteps });
 
       } catch (error) {
         console.error("Failed to break down step:", error);
@@ -206,13 +193,12 @@ export default function Home() {
       }))
       .filter(step => !step.completed);
 
-    updateTask({ ...task, steps: activeSteps });
+    updateTaskAndSave({ ...task, steps: activeSteps });
     toast({ title: "Completed steps cleared!" });
   };
 
   const handleReset = async () => {
-    setTask(null);
-    updateTaskInDb(null);
+    updateTaskAndSave(null);
     toast({ title: "Task reset.", description: "Ready for the next challenge!" });
   };
 
