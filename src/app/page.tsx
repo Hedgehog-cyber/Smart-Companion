@@ -14,6 +14,7 @@ import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { DopamineCounter } from "@/components/dopamine-counter";
 import { cn } from "@/lib/utils";
+import { Sparkles } from "@/components/sparkles";
 
 const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
@@ -69,7 +70,7 @@ export default function Home() {
   useEffect(() => {
     if (completedWins > prevWinsRef.current) {
       setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 400); // must match animation duration
+      const timer = setTimeout(() => setIsAnimating(false), 2000); // match max animation duration
       return () => clearTimeout(timer);
     }
     prevWinsRef.current = completedWins;
@@ -220,10 +221,10 @@ export default function Home() {
   return (
     <main
       className={cn(
-        "flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20 transition-colors",
-        isAnimating && "animate-page-pop"
+        "flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20 transition-colors"
       )}
     >
+      {isAnimating && <Sparkles />}
       <AppHeader />
       <DopamineCounter count={completedWins} />
       <div className="w-full max-w-2xl">

@@ -98,11 +98,10 @@ export default {
           '50%': { transform: 'scale(1.2)' },
           '75%': { backgroundColor: 'hsla(142, 71%, 45%, 0.3)' },
         },
-        'page-pop': {
-          '50%': {
-            transform: 'scale(1.005)',
-            backgroundColor: 'hsla(142, 71%, 45%, 0.15)',
-          },
+        'sparkle-fade': {
+          '0%': { opacity: '0', transform: 'scale(0) rotate(0deg)' },
+          '50%': { opacity: '1', transform: 'scale(1.2) rotate(180deg)' },
+          '100%': { opacity: '0', transform: 'scale(0) rotate(360deg)' },
         },
       },
       animation: {
@@ -110,7 +109,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.5s ease-in-out',
         'pop-flash': 'pop-flash 0.5s ease-in-out',
-        'page-pop': 'page-pop 0.4s ease-in-out',
+        'sparkle-fade': 'sparkle-fade 1s ease-in-out',
       },
     },
   },
