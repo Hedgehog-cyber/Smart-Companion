@@ -20,7 +20,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Progress } from './ui/progress';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 type TaskDisplayProps = {
   task: Task;
@@ -38,12 +38,16 @@ const StepItem = ({
   onToggleSubStep,
   onBreakdown,
   isBreakingDown,
+  isOpen,
+  onOpenChange,
 }: {
   step: Step;
   onToggleStep: (id: string) => void;
   onToggleSubStep: (stepId: string, subStepId: string) => void;
   onBreakdown: (step: Step) => void;
   isBreakingDown: boolean;
+  isOpen: boolean;
+  onOpenChange: () => void;
 }) => {
   const breakdownButton = (
     <div className="flex flex-col items-center text-center">
@@ -101,6 +105,8 @@ const StepItem = ({
       type="single"
       collapsible
       className="w-full border rounded-lg bg-card"
+      value={isOpen ? step.id : undefined}
+      onValueChange={onOpenChange}
     >
       <AccordionItem value={step.id} className="border-b-0">
         <div className="flex items-start md:items-center p-4">
@@ -192,6 +198,23 @@ export function TaskDisplay({
     };
   }, [task]);
 
+  const [openAccordionIds, setOpenAccordionIds] = useState<string[]>([]);
+
+  const handleBreakdownWrapper = (step: Step) => {
+    onBreakdown(step);
+    if (!openAccordionIds.includes(step.id)) {
+      setOpenAccordionIds((prev) => [...prev, step.id]);
+    }
+  };
+
+  const handleAccordionToggle = (stepId: string) => {
+    setOpenAccordionIds((prev) =>
+      prev.includes(stepId)
+        ? prev.filter((id) => id !== stepId)
+        : [...prev, stepId]
+    );
+  };
+
   return (
     <Card className="w-full animate-fade-in">
       <CardHeader>
@@ -213,8 +236,10 @@ export function TaskDisplay({
               step={step}
               onToggleStep={onToggleStep}
               onToggleSubStep={onToggleSubStep}
-              onBreakdown={onBreakdown}
+              onBreakdown={handleBreakdownWrapper}
               isBreakingDown={breakingDownId === step.id}
+              isOpen={openAccordionIds.includes(step.id)}
+              onOpenChange={() => handleAccordionToggle(step.id)}
             />
           ))
         ) : (
