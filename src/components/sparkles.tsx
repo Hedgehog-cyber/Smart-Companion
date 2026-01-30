@@ -40,7 +40,7 @@ export function Sparkles() {
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-50">
+    <div className="fixed inset-0 pointer-events-none z-50">
       {sparkles.map(({ id, top, left, size, duration, delay }) => (
         <SparkleIcon
           key={id}
