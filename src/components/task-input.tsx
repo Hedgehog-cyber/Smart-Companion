@@ -52,10 +52,15 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Initialize speech recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      // Silently disable if not supported, button will be disabled.
+      toast({
+        variant: "destructive",
+        title: "Speech Recognition Not Supported",
+        description: "Your browser does not support speech recognition.",
+      });
       return;
     }
 
@@ -73,10 +78,17 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     };
 
     recognition.onerror = (event: any) => {
+      let description = `An error occurred: ${event.error}`;
+      if (event.error === 'not-allowed') {
+        description =
+          'Microphone access was denied. Please allow microphone access in your browser settings.';
+      } else if (event.error === 'no-speech') {
+        description = 'No speech was detected. Please try again.';
+      }
       toast({
         variant: "destructive",
         title: "Speech Recognition Error",
-        description: event.error === 'not-allowed' ? 'Microphone access was denied.' : `An error occurred: ${event.error}`,
+        description,
       });
       setIsListening(false);
     };
@@ -85,15 +97,28 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
       const transcript = event.results[0][0].transcript;
       form.setValue('task', transcript);
     };
-    
+
     recognitionRef.current = recognition;
 
-  }, [form, toast]);
-
+    // Cleanup function to stop recognition if the component unmounts
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs only once
 
   const handleMicClick = () => {
-    if (!recognitionRef.current) return;
-    
+    if (!recognitionRef.current) {
+      toast({
+        variant: 'destructive',
+        title: 'Speech Recognition Not Ready',
+        description: 'Please wait a moment and try again.',
+      });
+      return;
+    }
+
     if (isListening) {
       recognitionRef.current.stop();
     } else {
@@ -104,7 +129,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
         toast({
             variant: "destructive",
             title: "Could not start listening",
-            description: "Please try again.",
+            description: "There was an issue starting the speech recognition service.",
         })
       }
     }
@@ -155,7 +180,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 disabled={!recognitionRef.current || isPending}
                 className={cn(
                   'h-11 w-11',
-                  isListening && "bg-primary/20 text-primary animate-pulse"
+                  isListening && "bg-destructive/20 text-destructive animate-pulse"
                 )}
                 aria-label={isListening ? 'Stop listening' : 'Start listening'}
               >
