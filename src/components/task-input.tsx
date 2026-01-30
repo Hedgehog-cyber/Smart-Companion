@@ -138,8 +138,8 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 </FormItem>
               )}
             />
-            <div className="flex items-stretch gap-2">
-              <Button type="submit" disabled={isPending} className="flex-1" size="lg">
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={isPending} className="flex-grow" size="lg">
                 {isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : (
@@ -149,11 +149,12 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
               </Button>
               <Button 
                 type="button"
-                size="lg"
+                size="icon"
                 variant="secondary"
                 onClick={handleMicClick}
                 disabled={!recognitionRef.current || isPending}
                 className={cn(
+                  'h-11 w-11',
                   isListening && "bg-primary/20 text-primary animate-pulse"
                 )}
                 aria-label={isListening ? 'Stop listening' : 'Start listening'}
