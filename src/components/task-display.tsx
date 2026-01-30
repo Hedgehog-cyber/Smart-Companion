@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/accordion';
 import { Progress } from './ui/progress';
 import { useMemo } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type TaskDisplayProps = {
   task: Task;
@@ -47,28 +46,29 @@ const StepItem = ({
   isBreakingDown: boolean;
 }) => {
   const breakdownButton = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onBreakdown(step)}
-            disabled={isBreakingDown || step.completed}
-            aria-label="Break this step down further"
-          >
-            {isBreakingDown ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Still too hard?</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex flex-col items-center text-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onBreakdown(step)}
+        disabled={isBreakingDown || step.completed}
+        aria-label="Break this step down further"
+      >
+        {isBreakingDown ? (
+          <Loader2 className="animate-spin" />
+        ) : (
+          <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+        )}
+      </Button>
+      <p
+        className={cn(
+          'text-xs text-muted-foreground -mt-1',
+          (isBreakingDown || step.completed) && 'opacity-50'
+        )}
+      >
+        Still too hard?
+      </p>
+    </div>
   );
 
   const content = (
@@ -141,22 +141,28 @@ const StepItem = ({
                 </label>
               </div>
             ))}
-             <div className="pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onBreakdown(step)}
-                disabled={isBreakingDown || step.completed}
-                aria-label="Break this step down further"
-                className="gap-2"
-              >
-                {isBreakingDown ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-                )}
-                <span>Break down further</span>
-              </Button>
+             <div className="pt-2 flex flex-col items-start">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onBreakdown(step)}
+                    disabled={isBreakingDown || step.completed}
+                    aria-label="Break this step down further"
+                >
+                    {isBreakingDown ? (
+                    <Loader2 className="animate-spin" />
+                    ) : (
+                    <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+                    )}
+                </Button>
+                <p
+                    className={cn(
+                    'text-xs text-muted-foreground -mt-1',
+                    (isBreakingDown || step.completed) && 'opacity-50'
+                    )}
+                >
+                    Still too hard?
+                </p>
             </div>
           </div>
         </AccordionContent>
