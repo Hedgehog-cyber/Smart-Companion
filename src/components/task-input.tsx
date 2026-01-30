@@ -51,6 +51,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
   const { toast } = useToast();
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -98,6 +99,10 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       form.setValue('task', transcript);
+      // Automatically submit the form
+      setTimeout(() => {
+        formRef.current?.requestSubmit();
+      }, 100);
     };
 
     recognitionRef.current = recognition;
@@ -147,7 +152,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="task"
@@ -165,7 +170,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 </FormItem>
               )}
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Button type="submit" disabled={isPending} className="flex-grow" size="lg">
                 {isPending ? (
                   <Loader2 className="animate-spin" />
@@ -177,9 +182,9 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
               <Button 
                 type="button"
                 size="icon"
-                variant="secondary"
+                variant="outline"
                 onClick={handleMicClick}
-                disabled={!recognitionRef.current || isPending}
+                disabled={isPending}
                 className={cn(
                   'h-11 w-11',
                   isListening && "bg-destructive/20 text-destructive animate-pulse"
