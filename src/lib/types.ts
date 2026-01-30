@@ -12,7 +12,7 @@ export interface Step {
 }
 
 export interface Task {
-  id: 'current_task';
+  id: string;
   mainTask: string;
   steps: Step[];
   createdAt: number;

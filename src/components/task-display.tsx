@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles, Trash, Eraser } from 'lucide-react';
+import { Loader2, Sparkles, Trash, Archive } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -253,7 +253,7 @@ export function TaskDisplay({
           <Trash /> Clear Completed
         </Button>
         <Button variant="destructive" onClick={onReset}>
-          <Eraser /> Start Over
+          <Archive /> Archive & Start New
         </Button>
       </CardFooter>
     </Card>

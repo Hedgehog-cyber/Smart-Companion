@@ -25,7 +25,8 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
-  const [task, setTask] = useState<Task | null>(null);
+  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [taskHistory, setTaskHistory] = useState<Task[]>([]);
   const [completedWins, setCompletedWins] = useState(0);
   const [isTaskLoading, setIsTaskLoading] = useState(true);
 
@@ -43,24 +44,22 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
+  // App Hydration: On initial mount, check for existing data in localStorage.
   useEffect(() => {
     setIsTaskLoading(true);
     try {
-      // App Hydration: On initial mount, check for existing data in localStorage.
-      const savedTaskJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedTaskJson) {
-        const savedTask = JSON.parse(savedTaskJson) as Task;
-        setTask(savedTask);
-        const initialWins = savedTask.steps.reduce((acc, step) => {
-          if (step.completed) acc++;
-          acc += step.subSteps.filter((sub) => sub.completed).length;
-          return acc;
-        }, 0);
-        setCompletedWins(initialWins);
-        prevWinsRef.current = initialWins;
+      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedDataJson) {
+        const { currentTask: savedTask, history: savedHistory } = JSON.parse(savedDataJson);
+        if (savedTask) {
+          setCurrentTask(savedTask);
+        }
+        if (savedHistory) {
+          setTaskHistory(savedHistory);
+        }
       }
     } catch (error) {
-      console.error("Failed to load task from localStorage:", error);
+      console.error("Failed to load data from localStorage:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -71,6 +70,39 @@ export default function Home() {
     }
   }, [toast]);
 
+  // State Synchronization & Deep Persistence:
+  // This effect saves the state to localStorage whenever it changes.
+  useEffect(() => {
+    if (!isTaskLoading) {
+      try {
+        const dataToSave = { currentTask, history: taskHistory };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
+      } catch (error) {
+        console.error("Failed to save task to localStorage:", error);
+        toast({
+          variant: "destructive",
+          title: "Error saving task",
+          description: "Your task could not be saved to local storage.",
+        });
+      }
+    }
+  }, [currentTask, taskHistory, isTaskLoading, toast]);
+  
+  // Update dopamine counter when task changes
+  useEffect(() => {
+    if (currentTask) {
+      const totalWins = currentTask.steps.reduce((acc, step) => {
+        if (step.completed) acc++;
+        acc += step.subSteps.filter((sub) => sub.completed).length;
+        return acc;
+      }, 0);
+      setCompletedWins(totalWins);
+    } else {
+      setCompletedWins(0);
+    }
+  }, [currentTask]);
+
+
   useEffect(() => {
     if (completedWins > prevWinsRef.current) {
       setIsAnimating(true);
@@ -80,34 +112,6 @@ export default function Home() {
     prevWinsRef.current = completedWins;
   }, [completedWins]);
 
-  // State Synchronization & Deep Persistence:
-  // This function updates state and saves the entire task object to localStorage.
-  const updateTaskAndSave = (updatedTask: Task | null) => {
-    setTask(updatedTask);
-    try {
-      if (updatedTask) {
-        const totalWins = updatedTask.steps.reduce((acc, step) => {
-          if (step.completed) acc++;
-          // Ensures deep persistence of sub-tasks
-          acc += step.subSteps.filter((sub) => sub.completed).length;
-          return acc;
-        }, 0);
-        setCompletedWins(totalWins);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
-      } else {
-        setCompletedWins(0);
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-      }
-    } catch (error) {
-      console.error("Failed to save task to localStorage:", error);
-      toast({
-        variant: "destructive",
-        title: "Error saving task",
-        description: "Your task could not be saved to the local storage.",
-      });
-    }
-  };
-
   const handleCreateTask = async (data: { task: string }) => {
     startGeneratingTransition(async () => {
       try {
@@ -116,7 +120,7 @@ export default function Home() {
           throw new Error("AI failed to generate steps.");
         }
         const newTask: Task = {
-          id: "current_task",
+          id: crypto.randomUUID(),
           mainTask: data.task,
           steps: result.steps.map((stepText) => ({
             id: crypto.randomUUID(),
@@ -126,7 +130,7 @@ export default function Home() {
           })),
           createdAt: Date.now(),
         };
-        updateTaskAndSave(newTask);
+        setCurrentTask(newTask);
       } catch (error) {
         console.error("Failed to generate steps:", error);
         toast({
@@ -140,16 +144,16 @@ export default function Home() {
   };
 
   const handleToggleStep = (stepId: string) => {
-    if (!task) return;
-    const updatedSteps = task.steps.map((step) =>
+    if (!currentTask) return;
+    const updatedSteps = currentTask.steps.map((step) =>
       step.id === stepId ? { ...step, completed: !step.completed } : step
     );
-    updateTaskAndSave({ ...task, steps: updatedSteps });
+    setCurrentTask({ ...currentTask, steps: updatedSteps });
   };
 
   const handleToggleSubStep = (stepId: string, subStepId: string) => {
-    if (!task) return;
-    const updatedSteps = task.steps.map((step) => {
+    if (!currentTask) return;
+    const updatedSteps = currentTask.steps.map((step) => {
       if (step.id === stepId) {
         const updatedSubSteps = step.subSteps.map((subStep) =>
           subStep.id === subStepId
@@ -160,11 +164,11 @@ export default function Home() {
       }
       return step;
     });
-    updateTaskAndSave({ ...task, steps: updatedSteps });
+    setCurrentTask({ ...currentTask, steps: updatedSteps });
   };
 
   const handleBreakDown = (step: Step) => {
-    if (!task) return;
+    if (!currentTask) return;
     setBreakingDownId(step.id);
     startBreakingDownTransition(async () => {
       try {
@@ -179,13 +183,13 @@ export default function Home() {
           completed: false,
         }));
 
-        const updatedSteps = task.steps.map((s) =>
+        const updatedSteps = currentTask.steps.map((s) =>
           s.id === step.id
             ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] }
             : s
         );
 
-        updateTaskAndSave({ ...task, steps: updatedSteps });
+        setCurrentTask({ ...currentTask, steps: updatedSteps });
       } catch (error) {
         console.error("Failed to break down step:", error);
         toast({
@@ -201,23 +205,24 @@ export default function Home() {
   };
 
   const handleClearCompleted = () => {
-    if (!task) return;
-    const activeSteps = task.steps
+    if (!currentTask) return;
+    const activeSteps = currentTask.steps
       .map((step) => ({
         ...step,
         subSteps: step.subSteps.filter((sub) => !sub.completed),
       }))
       .filter((step) => !step.completed);
 
-    updateTaskAndSave({ ...task, steps: activeSteps });
+    setCurrentTask({ ...currentTask, steps: activeSteps });
     toast({ title: "Completed steps cleared!" });
   };
 
-  // Data Integrity: Wipes localStorage and resets the UI state.
   const handleReset = async () => {
-    updateTaskAndSave(null);
+    if (!currentTask) return;
+    setTaskHistory(prev => [...prev, currentTask]);
+    setCurrentTask(null);
     toast({
-      title: "Task reset.",
+      title: "Task archived.",
       description: "Ready for the next challenge!",
     });
   };
@@ -236,11 +241,11 @@ export default function Home() {
       <AppHeader />
       <DopamineCounter count={completedWins} />
       <div className="w-full max-w-2xl">
-        {!task ? (
+        {!currentTask ? (
           <TaskInput onSubmit={handleCreateTask} isPending={isGenerating} />
         ) : (
           <TaskDisplay
-            task={task}
+            task={currentTask}
             onToggleStep={handleToggleStep}
             onToggleSubStep={handleToggleSubStep}
             onBreakdown={handleBreakDown}

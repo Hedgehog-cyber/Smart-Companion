@@ -1,6 +1,6 @@
 "use client";
 
-import { BrainCircuit, LogOut } from 'lucide-react';
+import { BrainCircuit, LogOut, History } from 'lucide-react';
 import { useAuth, useUser, initiateSignOut } from '@/firebase';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -12,10 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
   const auth = useAuth();
   const { user } = useUser();
+  const router = useRouter();
 
   const handleSignOut = async () => {
     if (auth) {
@@ -61,6 +63,11 @@ export function AppHeader() {
                   )}
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push('/history')}>
+                <History className="mr-2 h-4 w-4" />
+                <span>Task History</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
