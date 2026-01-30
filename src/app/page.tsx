@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
@@ -12,6 +12,7 @@ import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
 import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { DopamineCounter } from "@/components/dopamine-counter";
 
 const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
@@ -20,6 +21,7 @@ export default function Home() {
   const router = useRouter();
 
   const [task, setTask] = useState<Task | null>(null);
+  const [completedWins, setCompletedWins] = useState(0);
   const [isTaskLoading, setIsTaskLoading] = useState(true);
 
   const [isGenerating, startGeneratingTransition] = useTransition();
@@ -38,8 +40,14 @@ export default function Home() {
     try {
       const savedTaskJson = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedTaskJson) {
-        const savedTask = JSON.parse(savedTaskJson);
+        const savedTask = JSON.parse(savedTaskJson) as Task;
         setTask(savedTask);
+        const initialWins = savedTask.steps.reduce((acc, step) => {
+            if (step.completed) acc++;
+            acc += step.subSteps.filter(sub => sub.completed).length;
+            return acc;
+        }, 0);
+        setCompletedWins(initialWins);
       }
     } catch (error) {
       console.error("Failed to load task from localStorage:", error);
@@ -58,8 +66,15 @@ export default function Home() {
     setTask(updatedTask);
     try {
         if (updatedTask) {
+            const totalWins = updatedTask.steps.reduce((acc, step) => {
+                if (step.completed) acc++;
+                acc += step.subSteps.filter(sub => sub.completed).length;
+                return acc;
+            }, 0);
+            setCompletedWins(totalWins);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTask));
         } else {
+            setCompletedWins(0);
             localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
     } catch (error) {
@@ -188,7 +203,8 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20">
       <AppHeader />
-      <div className="w-full max-w-2xl mt-8">
+      <DopamineCounter count={completedWins} />
+      <div className="w-full max-w-2xl">
         {!task ? (
           <TaskInput onSubmit={handleCreateTask} isPending={isGenerating} />
         ) : (
