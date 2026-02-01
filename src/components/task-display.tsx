@@ -53,90 +53,85 @@ const StepItem = ({
 }) => {
   const isStepCompleted = step.completed && step.subSteps.every(s => s.completed);
 
-  const mainStepCheckbox = (
-    <div className="flex items-start gap-4">
-      <Checkbox
-        id={`step-${step.id}`}
-        checked={isStepCompleted}
-        onCheckedChange={() => onToggleStep(step.id)}
-        className="mt-1"
-      />
-      <div className="flex-1">
-        <label
-          htmlFor={`step-${step.id}`}
-          className={cn(
-            'text-lg font-medium transition-colors cursor-pointer leading-none',
-            isStepCompleted && 'line-through text-muted-foreground'
-          )}
-        >
-          {step.text}
-        </label>
-        {step.estimatedMinutes && !isStepCompleted && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
-                <Clock className="h-4 w-4" />
-                <span>About {step.estimatedMinutes} min</span>
-            </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className={cn("p-6 border rounded-lg bg-card space-y-6", isStepCompleted && "bg-success")}>
-        {hasSubSteps ? (
-             <Accordion type="single" collapsible value={isExpanded ? "item-1" : ""} onValueChange={onExpand}>
-                <AccordionItem value="item-1" className="border-b-0">
-                    <div className="flex items-start gap-4">
-                        <Checkbox
-                            id={`step-${step.id}`}
-                            checked={isStepCompleted}
-                            onCheckedChange={() => onToggleStep(step.id)}
-                            className="mt-1"
-                        />
-                        <AccordionTrigger className="flex-1 p-0 hover:no-underline text-left justify-start gap-2">
-                             <div className="flex-1">
-                                <span className={cn(
-                                    'text-lg font-medium transition-colors leading-none',
-                                    isStepCompleted && 'line-through text-muted-foreground'
-                                )}>
+        <Accordion type="single" collapsible value={isExpanded ? "item-1" : ""} onValueChange={onExpand} className="w-full">
+            <AccordionItem value="item-1" className="border-b-0">
+                <div className="flex items-start gap-4">
+                    <Checkbox
+                        id={`step-${step.id}`}
+                        checked={isStepCompleted}
+                        onCheckedChange={() => onToggleStep(step.id)}
+                        className="mt-1"
+                    />
+                    <div className="flex-1 flex justify-between items-start">
+                        {hasSubSteps ? (
+                            <AccordionTrigger className="flex-1 p-0 hover:no-underline text-left justify-start gap-2">
+                                <div className="flex-1">
+                                    <span className={cn(
+                                        'text-lg font-medium transition-colors leading-none',
+                                        isStepCompleted && 'line-through text-muted-foreground'
+                                    )}>
+                                        {step.text}
+                                    </span>
+                                </div>
+                            </AccordionTrigger>
+                        ) : (
+                             <div className="flex-1 pt-1">
+                                <label
+                                    htmlFor={`step-${step.id}`}
+                                    className={cn(
+                                        'text-lg font-medium transition-colors cursor-pointer leading-none',
+                                        isStepCompleted && 'line-through text-muted-foreground'
+                                    )}
+                                >
                                     {step.text}
-                                </span>
-                                {step.estimatedMinutes && !isStepCompleted && (
-                                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2 font-normal">
-                                        <Clock className="h-4 w-4" />
-                                        <span>About {step.estimatedMinutes} min</span>
-                                    </div>
-                                )}
+                                </label>
                             </div>
-                        </AccordionTrigger>
+                        )}
                     </div>
-                    <AccordionContent className="pt-6">
-                        <div className="space-y-4 pl-12 border-l-2 ml-2">
-                         {step.subSteps.map(subStep => (
-                            <div key={subStep.id} className="flex items-center gap-4 pl-4">
-                                <Checkbox
-                                id={`substep-${subStep.id}`}
-                                checked={subStep.completed}
-                                onCheckedChange={() => onToggleSubStep(step.id, subStep.id)}
-                                />
+                </div>
+
+                {step.estimatedMinutes && !isStepCompleted && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2 pl-10">
+                        <Clock className="h-4 w-4" />
+                        <span>About {step.estimatedMinutes} min</span>
+                    </div>
+                )}
+                
+                <AccordionContent className="pt-6">
+                    <div className="space-y-4 pl-12 border-l-2 ml-2">
+                     {step.subSteps.map(subStep => (
+                        <div key={subStep.id} className="flex items-start gap-4 pl-4">
+                            <Checkbox
+                            id={`substep-${subStep.id}`}
+                            checked={subStep.completed}
+                            onCheckedChange={() => onToggleSubStep(step.id, subStep.id)}
+                            className="mt-1"
+                            />
+                            <div className="flex-1">
                                 <label
                                 htmlFor={`substep-${subStep.id}`}
                                 className={cn(
-                                    'flex-1 text-sm font-medium transition-colors cursor-pointer',
+                                    'text-sm font-medium transition-colors cursor-pointer leading-none',
                                     subStep.completed && 'line-through text-muted-foreground'
                                 )}
                                 >
                                 {subStep.text}
                                 </label>
+                                {subStep.estimatedMinutes && !subStep.completed && (
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>About {subStep.estimatedMinutes} min</span>
+                                    </div>
+                                )}
                             </div>
-                         ))}
                         </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-        ) : (
-            mainStepCheckbox
-        )}
+                     ))}
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
         
       <div className="pl-10">
         <Button
@@ -188,13 +183,13 @@ export function TaskDisplay({
 
   useEffect(() => {
       // Automatically expand if sub-steps are added
-      if (currentStep && currentStep.subSteps.length > 0) {
+      if (currentStep && currentStep.subSteps.length > 0 && !isExpanded) {
           setIsExpanded(true);
       }
-      if (currentStep && currentStep.subSteps.length === 0) {
+      if (currentStep && currentStep.subSteps.length === 0 && isExpanded) {
         setIsExpanded(false);
       }
-  }, [currentStep]);
+  }, [currentStep, isExpanded]);
   
   const handleBreakdownWrapper = (step: Step) => {
     onBreakdown(step);

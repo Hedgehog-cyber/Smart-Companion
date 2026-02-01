@@ -17,7 +17,16 @@ const BreakDownFurtherInputSchema = z.object({
 export type BreakDownFurtherInput = z.infer<typeof BreakDownFurtherInputSchema>;
 
 const BreakDownFurtherOutputSchema = z.object({
-  subSteps: z.array(z.string()).describe('An array of more granular sub-steps for the given task.'),
+  subSteps: z
+    .array(
+      z.object({
+        task_description: z.string().describe('The description of the micro-win sub-step.'),
+        estimated_minutes: z
+          .number()
+          .describe('The estimated time in minutes to complete the sub-step. Should be 1 minute for these small actions.'),
+      })
+    )
+    .describe('An array of more granular sub-steps for the given task, with time estimates.'),
 });
 export type BreakDownFurtherOutput = z.infer<typeof BreakDownFurtherOutputSchema>;
 
@@ -29,7 +38,7 @@ const prompt = ai.definePrompt({
   name: 'breakDownFurtherPrompt',
   input: {schema: BreakDownFurtherInputSchema},
   output: {schema: BreakDownFurtherOutputSchema},
-  prompt: `The user is stuck on this specific step: {{{task}}}. Please break this down into 3 even smaller, five-second physical actions.`,
+  prompt: `The user is stuck on this specific step: {{{task}}}. Please break this down into 3 even smaller, physical actions. For each action, provide a task_description and an estimated_minutes field. Since these are very short actions, the estimated_minutes should always be 1.`,
 });
 
 const breakDownFurtherFlow = ai.defineFlow(

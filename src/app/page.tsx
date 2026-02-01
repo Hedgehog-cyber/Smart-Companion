@@ -150,9 +150,10 @@ export default function Home() {
           throw new Error('AI failed to generate sub-steps.');
         }
 
-        const newSubSteps: SubStep[] = result.subSteps.map(text => ({
+        const newSubSteps: SubStep[] = result.subSteps.map(subStep => ({
           id: crypto.randomUUID(),
-          text,
+          text: subStep.task_description,
+          estimatedMinutes: subStep.estimated_minutes,
           completed: false,
         }));
 
