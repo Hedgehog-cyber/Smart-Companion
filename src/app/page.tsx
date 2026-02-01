@@ -145,7 +145,15 @@ export default function Home() {
     setBreakingDownId(step.id);
     startBreakingDownTransition(async () => {
       try {
-        const result = await breakDownFurther({ task: step.text });
+        // If the parent step has no time estimate, default to 3 minutes,
+        // as the AI will break it into 3 smaller steps.
+        const parentMinutes = step.estimatedMinutes ?? 3;
+
+        const result = await breakDownFurther({
+          task: step.text,
+          parentEstimatedMinutes: parentMinutes,
+        });
+
         if (!result || !result.subSteps || result.subSteps.length === 0) {
           throw new Error('AI failed to generate sub-steps.');
         }
