@@ -3,17 +3,30 @@
 import { useEffect, useState } from 'react';
 import type { Task } from '@/lib/types';
 import { AppHeader } from '@/components/app-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
 export default function HistoryPage() {
     const [history, setHistory] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         try {
@@ -30,6 +43,33 @@ export default function HistoryPage() {
             setIsLoading(false);
         }
     }, []);
+
+    const handleDeleteTask = (taskId: string) => {
+        try {
+            const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (!savedDataJson) return;
+    
+            const savedData = JSON.parse(savedDataJson);
+            const updatedHistory = savedData.history.filter((task: Task) => task.id !== taskId);
+    
+            const newData = { ...savedData, history: updatedHistory };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+    
+            setHistory(updatedHistory.sort((a: Task, b: Task) => b.createdAt - a.createdAt));
+    
+            toast({
+                title: "Task Deleted",
+                description: "The task has been removed from your history.",
+            });
+        } catch (error) {
+            console.error("Failed to delete task from localStorage:", error);
+            toast({
+                variant: "destructive",
+                title: "Error Deleting Task",
+                description: "Could not delete the task.",
+            });
+        }
+    };
 
     return (
         <main className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20">
@@ -86,6 +126,31 @@ export default function HistoryPage() {
                                         </AccordionItem>
                                     </Accordion>
                                 </CardContent>
+                                <CardFooter className="justify-end">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete this task
+                                                    from your history.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteTask(task.id)}>
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </CardFooter>
                             </Card>
                         ))}
                     </div>
