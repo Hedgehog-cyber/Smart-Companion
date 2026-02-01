@@ -11,7 +11,7 @@ import { TaskInput } from '@/components/task-input';
 import { TaskDisplay } from '@/components/task-display';
 import { PageSkeleton } from '@/components/page-skeleton';
 import { cn } from '@/lib/utils';
-import { useCompletionSound } from '@/hooks/use-completion-sound';
+import { playSuccessSound } from '@/lib/sounds';
 
 const LOCAL_STORAGE_KEY = 'smart_companion_tasks';
 
@@ -23,8 +23,7 @@ export default function Home() {
   const [isBreakingDown, startBreakingDownTransition] = useTransition();
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
-  const playCompletionSound = useCompletionSound();
-
+  
   // App Hydration: On initial mount, load from localStorage.
   useEffect(() => {
     setIsTaskLoading(true);
@@ -102,7 +101,7 @@ export default function Home() {
     const isCompleting = !currentTask.steps.find(s => s.id === stepId)?.completed;
 
     if (isCompleting) {
-      playCompletionSound();
+      playSuccessSound();
     }
 
     const updatedSteps = currentTask.steps.map(step =>
@@ -121,7 +120,7 @@ export default function Home() {
 
     // Play sound only when marking as complete
     if (subStep && !subStep.completed) {
-      playCompletionSound();
+      playSuccessSound();
     }
 
     let parentStepCompleted = true;
