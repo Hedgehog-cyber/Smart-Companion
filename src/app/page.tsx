@@ -76,9 +76,10 @@ export default function Home() {
         const newTask: Task = {
           id: crypto.randomUUID(),
           mainTask: data.task,
-          steps: result.steps.map(stepText => ({
+          steps: result.steps.map(step => ({
             id: crypto.randomUUID(),
-            text: stepText,
+            text: step.task_description,
+            estimatedMinutes: step.estimated_minutes,
             completed: false,
             subSteps: [],
           })),

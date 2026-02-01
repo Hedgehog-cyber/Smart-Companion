@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, Clock } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -61,15 +61,23 @@ const StepItem = ({
         onCheckedChange={() => onToggleStep(step.id)}
         className="mt-1"
       />
-      <label
-        htmlFor={`step-${step.id}`}
-        className={cn(
-          'flex-1 text-lg font-medium transition-colors cursor-pointer',
-          isStepCompleted && 'line-through text-muted-foreground'
+      <div className="flex-1">
+        <label
+          htmlFor={`step-${step.id}`}
+          className={cn(
+            'text-lg font-medium transition-colors cursor-pointer leading-none',
+            isStepCompleted && 'line-through text-muted-foreground'
+          )}
+        >
+          {step.text}
+        </label>
+        {step.estimatedMinutes && !isStepCompleted && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
+                <Clock className="h-4 w-4" />
+                <span>About {step.estimatedMinutes} min</span>
+            </div>
         )}
-      >
-        {step.text}
-      </label>
+      </div>
     </div>
   );
 
@@ -86,12 +94,20 @@ const StepItem = ({
                             className="mt-1"
                         />
                         <AccordionTrigger className="flex-1 p-0 hover:no-underline text-left justify-start gap-2">
-                             <span className={cn(
-                                'text-lg font-medium transition-colors',
-                                isStepCompleted && 'line-through text-muted-foreground'
-                            )}>
-                                {step.text}
-                            </span>
+                             <div className="flex-1">
+                                <span className={cn(
+                                    'text-lg font-medium transition-colors leading-none',
+                                    isStepCompleted && 'line-through text-muted-foreground'
+                                )}>
+                                    {step.text}
+                                </span>
+                                {step.estimatedMinutes && !isStepCompleted && (
+                                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2 font-normal">
+                                        <Clock className="h-4 w-4" />
+                                        <span>About {step.estimatedMinutes} min</span>
+                                    </div>
+                                )}
+                            </div>
                         </AccordionTrigger>
                     </div>
                     <AccordionContent className="pt-6">

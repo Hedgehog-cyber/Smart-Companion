@@ -17,7 +17,16 @@ const GenerateMicroWinStepsInputSchema = z.object({
 export type GenerateMicroWinStepsInput = z.infer<typeof GenerateMicroWinStepsInputSchema>;
 
 const GenerateMicroWinStepsOutputSchema = z.object({
-  steps: z.array(z.string()).describe('An array of 5-7 actionable micro-win steps.'),
+  steps: z
+    .array(
+      z.object({
+        task_description: z.string().describe('The description of the micro-win step.'),
+        estimated_minutes: z
+          .number()
+          .describe('The estimated time in minutes to complete the step, including a buffer.'),
+      })
+    )
+    .describe('An array of 5-7 actionable micro-win steps with time estimates.'),
 });
 export type GenerateMicroWinStepsOutput = z.infer<typeof GenerateMicroWinStepsOutputSchema>;
 
@@ -29,14 +38,16 @@ const prompt = ai.definePrompt({
   name: 'generateMicroWinStepsPrompt',
   input: {schema: GenerateMicroWinStepsInputSchema},
   output: {schema: GenerateMicroWinStepsOutputSchema},
-  prompt: `You are a helpful assistant designed to break down overwhelming tasks into manageable micro-win steps.
+  prompt: `Act as an Executive Function Coach. Your goal is to break down an overwhelming task into manageable micro-win steps for a user who may struggle with task initiation or distractions.
 
-  Given the following task, generate 5-7 actionable steps that a user can take to achieve it.
+  For the given task, generate 5-7 actionable micro-win steps. For each step, provide a realistic time estimate in minutes.
 
   Task: {{{task}}}
 
-  Format your response as a JSON object with a "steps" array containing the micro-win steps.
-  `,
+  Constraints:
+  - Add a 'Neuro-Buffer': Add a 20-30% time buffer to standard estimates to account for potential distractions or task-switching difficulties.
+  - Granularity: If a task takes less than 1 minute, set estimated_minutes to 1.
+  - Format: The output must be a JSON object with a "steps" array. Each object in the array must have a "task_description" (string) and an "estimated_minutes" (number) field.`,
 });
 
 const generateMicroWinStepsFlow = ai.defineFlow(

@@ -7,6 +7,7 @@ export interface SubStep {
 export interface Step {
   id: string;
   text: string;
+  estimatedMinutes?: number;
   completed: boolean;
   subSteps: SubStep[];
 }
