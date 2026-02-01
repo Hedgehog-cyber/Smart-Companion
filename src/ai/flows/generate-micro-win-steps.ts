@@ -47,24 +47,25 @@ const prompt = ai.definePrompt({
   name: 'generateMicroWinStepsPrompt',
   input: {schema: GenerateMicroWinStepsInputSchema},
   output: {schema: GenerateMicroWinStepsOutputSchema},
-  prompt: `Act as an Executive Function Coach. Your goal is to break down an overwhelming task into manageable micro-win steps for a user who may struggle with task initiation or distractions.
+  prompt: `Act as a Neuro-Inclusive Coach. A user has provided a goal. Your task is to break it down into manageable micro-win steps.
 
-  {{#if userProfile}}
-  Note: You are helping a specific user. Refer to their profile and adjust your breakdown.
-  User Profile Context:
-  - Task Granularity Needs: "{{{userProfile.task_granularity}}}"
-  - Sensory Triggers to Avoid: "{{{userProfile.sensory_triggers}}}"
-  - Specific Support Requirements: "{{{userProfile.support_requirements}}}"
-  {{/if}}
+User's Goal: "{{{task}}}"
 
-  For the given task, generate 5-7 actionable micro-win steps. For each step, provide a realistic time estimate in minutes.
+{{#if userProfile}}
+User Context: Apply these preferences from their profile.
+- Task Granularity Needs: "{{{userProfile.task_granularity}}}"
+- Sensory Triggers to Avoid: "{{{userProfile.sensory_triggers}}}"
+- Specific Support Requirements: "{{{userProfile.support_requirements}}}"
+{{/if}}
 
-  Task: {{{task}}}
+Note: Some personal details in the user's goal may have been masked for privacy with tags like [NAME], [CONTACT], or [LOCATION]. Please provide the breakdown using these generic tags as needed.
 
-  Constraints:
-  - Add a 'Neuro-Buffer': Add a 20-30% time buffer to standard estimates to account for potential distractions or task-switching difficulties.
-  - Granularity: If a task takes less than 1 minute, set estimated_minutes to 1.
-  - Format: The output must be a JSON object with a "steps" array. Each object in the array must have a "task_description" (string) and an "estimated_minutes" (number) field.`,
+Generate 5-7 actionable micro-win steps. For each step, provide a realistic time estimate in minutes.
+
+Constraints:
+- Add a 'Neuro-Buffer': Add a 20-30% time buffer to standard estimates to account for potential distractions or task-switching difficulties.
+- Granularity: If a task takes less than 1 minute, set estimated_minutes to 1.
+- Format: The output must be a JSON object with a "steps" array. Each object in the array must have a "task_description" (string) and an "estimated_minutes" (number) field.`,
 });
 
 const generateMicroWinStepsFlow = ai.defineFlow(

@@ -48,16 +48,17 @@ const prompt = ai.definePrompt({
   name: 'breakDownFurtherPrompt',
   input: {schema: BreakDownFurtherInputSchema},
   output: {schema: BreakDownFurtherOutputSchema},
-  prompt: `Act as an Executive Function Coach. The user is stuck on a specific step: "{{{task}}}".
+  prompt: `Act as a Neuro-Inclusive Coach. The user is stuck on a specific step: "{{{task}}}"
 This step was estimated to take {{{parentEstimatedMinutes}}} minutes.
 
 {{#if userProfile}}
-Note: You are helping a specific user. Refer to their profile and adjust your breakdown.
-User Profile Context:
+User Context: Apply these preferences from their profile.
 - Task Granularity Needs: "{{{userProfile.task_granularity}}}"
 - Sensory Triggers to Avoid: "{{{userProfile.sensory_triggers}}}"
 - Specific Support Requirements: "{{{userProfile.support_requirements}}}"
 {{/if}}
+
+Note: Some personal details in the user's step may have been masked for privacy with tags like [NAME], [CONTACT], or [LOCATION]. Please provide the breakdown using these generic tags as needed.
 
 Your task is to break this down into exactly 3 smaller, concrete, physical actions. For each new sub-step, you must provide a 'task_description' and an 'estimated_minutes'.
 

@@ -16,6 +16,27 @@ import { playSuccessSound } from '@/lib/sounds';
 const LOCAL_STORAGE_KEY_TASKS = 'smart_companion_tasks';
 const LOCAL_STORAGE_KEY_PROFILE = 'user_neuro_profile';
 
+const maskPII = (text: string): string => {
+  if (!text) return '';
+  // Basic regex for emails
+  let maskedText = text.replace(/[\w.-]+@([\w-]+\.)+[\w-]{2,4}/g, '[CONTACT]');
+  // Basic regex for phone numbers (North American format and some international)
+  maskedText = maskedText.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '[CONTACT]');
+  // Basic regex for addresses (Number followed by Street/St/Ave etc.)
+  maskedText = maskedText.replace(/\d+\s+[a-zA-Z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct)\b/gi, '[LOCATION]');
+  // Basic regex for names (Capitalized word), avoiding single-letter words or common sentence starters. This is imperfect.
+  maskedText = maskedText.replace(/\b([A-Z][a-z]{2,})\b/g, (match, p1) => {
+    const commonWords = ['I', 'The', 'A', 'An', 'My', 'Your', 'His', 'Her', 'It', 'Our', 'Their', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    if (commonWords.includes(p1)) {
+        return match;
+    }
+    return '[NAME]';
+  });
+
+  return maskedText;
+};
+
+
 export default function Home() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -78,8 +99,9 @@ export default function Home() {
   const handleCreateTask = async (data: { task: string }) => {
     startGeneratingTransition(async () => {
       try {
+        const maskedTask = maskPII(data.task);
         const result = await generateMicroWinSteps({
-          task: data.task,
+          task: maskedTask,
           userProfile: userProfile || undefined,
         });
         if (!result || !result.steps || result.steps.length === 0) {
@@ -160,9 +182,11 @@ export default function Home() {
         // If the parent step has no time estimate, default to 3 minutes,
         // as the AI will break it into 3 smaller steps.
         const parentMinutes = step.estimatedMinutes ?? 3;
+        
+        const maskedText = maskPII(step.text);
 
         const result = await breakDownFurther({
-          task: step.text,
+          task: maskedText,
           parentEstimatedMinutes: parentMinutes,
           userProfile: userProfile || undefined,
         });
