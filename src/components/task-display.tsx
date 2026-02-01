@@ -78,7 +78,22 @@ const StepItem = ({
         {hasSubSteps ? (
              <Accordion type="single" collapsible value={isExpanded ? "item-1" : ""} onValueChange={onExpand}>
                 <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="p-0 hover:no-underline">{mainStepCheckbox}</AccordionTrigger>
+                    <div className="flex items-start gap-4">
+                        <Checkbox
+                            id={`step-${step.id}`}
+                            checked={isStepCompleted}
+                            onCheckedChange={() => onToggleStep(step.id)}
+                            className="mt-1"
+                        />
+                        <AccordionTrigger className="flex-1 p-0 hover:no-underline text-left justify-start gap-2">
+                             <span className={cn(
+                                'text-lg font-medium transition-colors',
+                                isStepCompleted && 'line-through text-muted-foreground'
+                            )}>
+                                {step.text}
+                            </span>
+                        </AccordionTrigger>
+                    </div>
                     <AccordionContent className="pt-6">
                         <div className="space-y-4 pl-12 border-l-2 ml-2">
                          {step.subSteps.map(subStep => (
