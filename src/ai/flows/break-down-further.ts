@@ -11,9 +11,18 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const UserProfileSchema = z
+  .object({
+    granularity_level: z.enum(['Normal', 'High']),
+    specific_triggers: z.string(),
+    preferred_support: z.string(),
+  })
+  .optional();
+
 const BreakDownFurtherInputSchema = z.object({
   task: z.string().describe('The task to break down further.'),
   parentEstimatedMinutes: z.number().describe('The estimated time in minutes for the parent task.'),
+  userProfile: UserProfileSchema.describe("The user's neuro-profile for personalized coaching.").optional(),
 });
 export type BreakDownFurtherInput = z.infer<typeof BreakDownFurtherInputSchema>;
 
@@ -41,6 +50,14 @@ const prompt = ai.definePrompt({
   output: {schema: BreakDownFurtherOutputSchema},
   prompt: `Act as an Executive Function Coach. The user is stuck on a specific step: "{{{task}}}".
 This step was estimated to take {{{parentEstimatedMinutes}}} minutes.
+
+{{#if userProfile}}
+You are helping a specific user. Refer to their profile and adjust your breakdown to match their triggers and needed granularity level.
+User Profile:
+- Granularity Level: {{{userProfile.granularity_level}}}
+- Specific Triggers to be mindful of: {{{userProfile.specific_triggers}}}
+- Preferred Support Style: {{{userProfile.preferred_support}}}
+{{/if}}
 
 Your task is to break this down into exactly 3 smaller, concrete, physical actions. For each new sub-step, you must provide a 'task_description' and an 'estimated_minutes'.
 

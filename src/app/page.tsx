@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition, useRef } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Task, Step, SubStep } from '@/lib/types';
+import type { Task, Step, SubStep, UserProfile } from '@/lib/types';
 import { generateMicroWinSteps } from '@/ai/flows/generate-micro-win-steps';
 import { breakDownFurther } from '@/ai/flows/break-down-further';
 
@@ -13,34 +13,43 @@ import { PageSkeleton } from '@/components/page-skeleton';
 import { cn } from '@/lib/utils';
 import { playSuccessSound } from '@/lib/sounds';
 
-const LOCAL_STORAGE_KEY = 'smart_companion_tasks';
+const LOCAL_STORAGE_KEY_TASKS = 'smart_companion_tasks';
+const LOCAL_STORAGE_KEY_PROFILE = 'smart_companion_profile';
 
 export default function Home() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isTaskLoading, setIsTaskLoading] = useState(true);
 
   const [isGenerating, startGeneratingTransition] = useTransition();
   const [isBreakingDown, startBreakingDownTransition] = useTransition();
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
-  
+
   // App Hydration: On initial mount, load from localStorage.
   useEffect(() => {
     setIsTaskLoading(true);
     try {
-      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedDataJson) {
-        const savedData = JSON.parse(savedDataJson);
+      // Load tasks
+      const savedTasksJson = localStorage.getItem(LOCAL_STORAGE_KEY_TASKS);
+      if (savedTasksJson) {
+        const savedData = JSON.parse(savedTasksJson);
         if (savedData.currentTask) {
           setCurrentTask(savedData.currentTask);
         }
       }
+      // Load profile
+      const savedProfileJson = localStorage.getItem(LOCAL_STORAGE_KEY_PROFILE);
+      if (savedProfileJson) {
+        const savedProfile = JSON.parse(savedProfileJson);
+        setUserProfile(savedProfile);
+      }
     } catch (error) {
-      console.error('Failed to load task from localStorage:', error);
+      console.error('Failed to load data from localStorage:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Could not load your saved task.',
+        description: 'Could not load your saved data.',
       });
     } finally {
       setIsTaskLoading(false);
@@ -52,10 +61,10 @@ export default function Home() {
     if (isTaskLoading) return;
     try {
       // This comment clarifies that data is stored locally for privacy.
-      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY_TASKS);
       const savedData = savedDataJson ? JSON.parse(savedDataJson) : {};
       const newData = { ...savedData, currentTask };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+      localStorage.setItem(LOCAL_STORAGE_KEY_TASKS, JSON.stringify(newData));
     } catch (error) {
       console.error('Failed to save task to localStorage:', error);
       toast({
@@ -69,7 +78,10 @@ export default function Home() {
   const handleCreateTask = async (data: { task: string }) => {
     startGeneratingTransition(async () => {
       try {
-        const result = await generateMicroWinSteps({ task: data.task });
+        const result = await generateMicroWinSteps({
+          task: data.task,
+          userProfile: userProfile || undefined,
+        });
         if (!result || !result.steps || result.steps.length === 0) {
           throw new Error('AI failed to generate steps.');
         }
@@ -152,6 +164,7 @@ export default function Home() {
         const result = await breakDownFurther({
           task: step.text,
           parentEstimatedMinutes: parentMinutes,
+          userProfile: userProfile || undefined,
         });
 
         if (!result || !result.subSteps || result.subSteps.length === 0) {
@@ -194,7 +207,7 @@ export default function Home() {
 
     try {
       // 1. Get current history from localStorage
-      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY_TASKS);
       const savedData = savedDataJson ? JSON.parse(savedDataJson) : { history: [] };
       const history = savedData.history || [];
 
@@ -203,7 +216,7 @@ export default function Home() {
 
       // 3. Update localStorage with new history and cleared task
       const newData = { ...savedData, history: updatedHistory, currentTask: null };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+      localStorage.setItem(LOCAL_STORAGE_KEY_TASKS, JSON.stringify(newData));
 
       // 4. Clear the current task in component state
       setCurrentTask(null);

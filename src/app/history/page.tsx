@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
-const LOCAL_STORAGE_KEY = "smart_companion_tasks";
+const LOCAL_STORAGE_KEY_TASKS = "smart_companion_tasks";
 
 export default function HistoryPage() {
     const [history, setHistory] = useState<Task[]>([]);
@@ -30,7 +30,7 @@ export default function HistoryPage() {
 
     useEffect(() => {
         try {
-            const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY_TASKS);
             if (savedDataJson) {
                 const savedData = JSON.parse(savedDataJson);
                 if (savedData.history) {
@@ -46,14 +46,14 @@ export default function HistoryPage() {
 
     const handleDeleteTask = (taskId: string) => {
         try {
-            const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY_TASKS);
             if (!savedDataJson) return;
     
             const savedData = JSON.parse(savedDataJson);
             const updatedHistory = savedData.history.filter((task: Task) => task.id !== taskId);
     
             const newData = { ...savedData, history: updatedHistory };
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+            localStorage.setItem(LOCAL_STORAGE_KEY_TASKS, JSON.stringify(newData));
     
             setHistory(updatedHistory.sort((a: Task, b: Task) => b.createdAt - a.createdAt));
     

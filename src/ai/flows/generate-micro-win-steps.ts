@@ -11,8 +11,17 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const UserProfileSchema = z
+  .object({
+    granularity_level: z.enum(['Normal', 'High']),
+    specific_triggers: z.string(),
+    preferred_support: z.string(),
+  })
+  .optional();
+
 const GenerateMicroWinStepsInputSchema = z.object({
   task: z.string().describe('The overwhelming task to break down.'),
+  userProfile: UserProfileSchema.describe("The user's neuro-profile for personalized coaching.").optional(),
 });
 export type GenerateMicroWinStepsInput = z.infer<typeof GenerateMicroWinStepsInputSchema>;
 
@@ -39,6 +48,14 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateMicroWinStepsInputSchema},
   output: {schema: GenerateMicroWinStepsOutputSchema},
   prompt: `Act as an Executive Function Coach. Your goal is to break down an overwhelming task into manageable micro-win steps for a user who may struggle with task initiation or distractions.
+
+  {{#if userProfile}}
+  You are helping a specific user. Refer to their profile and adjust your breakdown to match their triggers and needed granularity level.
+  User Profile:
+  - Granularity Level: {{{userProfile.granularity_level}}}
+  - Specific Triggers to be mindful of: {{{userProfile.specific_triggers}}}
+  - Preferred Support Style: {{{userProfile.preferred_support}}}
+  {{/if}}
 
   For the given task, generate 5-7 actionable micro-win steps. For each step, provide a realistic time estimate in minutes.
 

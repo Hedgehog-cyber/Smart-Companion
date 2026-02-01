@@ -14,8 +14,14 @@ export interface Step {
 }
 
 export interface Task {
-  id: string;
+  id:string;
   mainTask: string;
   steps: Step[];
   createdAt: number;
+}
+
+export interface UserProfile {
+  granularity_level: 'Normal' | 'High';
+  specific_triggers: string;
+  preferred_support: string;
 }
