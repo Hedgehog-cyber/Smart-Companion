@@ -1,31 +1,10 @@
 "use client";
 
-import { BrainCircuit, LogOut, History } from 'lucide-react';
-import { useAuth, useUser, initiateSignOut } from '@/firebase';
+import { BrainCircuit, History } from 'lucide-react';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export function AppHeader() {
-  const auth = useAuth();
-  const { user } = useUser();
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    if (auth) {
-      initiateSignOut(auth);
-    }
-  };
-
-  const userInitial = user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U";
 
   return (
     <header className="w-full max-w-4xl relative text-left">
@@ -39,44 +18,14 @@ export function AppHeader() {
         Your neuro-inclusive executive function coach
       </p>
 
-      {user && (
-        <div className="absolute top-0 right-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
-                <Avatar>
-                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User Avatar'} />
-                  <AvatarFallback>{userInitial}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user.displayName || user.email}
-                  </p>
-                  {user.displayName && user.email && (
-                     <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                     </p>
-                  )}
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/history')}>
+      <div className="absolute top-0 right-0">
+          <Button asChild variant="outline">
+            <Link href="/history">
                 <History className="mr-2 h-4 w-4" />
                 <span>Task History</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
+            </Link>
+          </Button>
+      </div>
     </header>
   );
 }

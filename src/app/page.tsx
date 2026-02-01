@@ -5,10 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
-import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { useRouter } from "next/navigation";
-import { collection, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
-
 
 import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
@@ -16,13 +12,9 @@ import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { cn } from "@/lib/utils";
 
-const TASK_DOC_ID = "current_task";
+const LOCAL_STORAGE_KEY = "smart_companion_tasks";
 
 export default function Home() {
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-  const firestore = useFirestore();
-
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [isTaskLoading, setIsTaskLoading] = useState(true);
 
@@ -31,73 +23,50 @@ export default function Home() {
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const taskDocRef = useMemoFirebase(
-    () => (firestore && user ? doc(firestore, "users", user.uid, "tasks", TASK_DOC_ID) : null),
-    [firestore, user]
-  );
-  
-  const historyCollectionRef = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, "users", user.uid, "history") : null),
-    [firestore, user]
-  );
-
+  // App Hydration: On initial mount, load from localStorage.
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, isUserLoading, router]);
-
-  // App Hydration: On initial mount, subscribe to Firestore data.
-  useEffect(() => {
-    if (!taskDocRef) {
-       setIsTaskLoading(isUserLoading); // Only loading if user is loading
-      return;
-    }
     setIsTaskLoading(true);
-    const unsubscribe = onSnapshot(taskDocRef, (doc) => {
-      if (doc.exists()) {
-        const taskData = doc.data() as Task;
-        // Basic validation in case of empty/corrupt data
-        if (taskData.mainTask && taskData.steps) {
-            setCurrentTask(taskData);
-        } else {
-            setCurrentTask(null);
+    try {
+      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedDataJson) {
+        const savedData = JSON.parse(savedDataJson);
+        if (savedData.currentTask) {
+          setCurrentTask(savedData.currentTask);
         }
-      } else {
-        setCurrentTask(null);
       }
-      setIsTaskLoading(false);
-    }, (error) => {
-      console.error("Failed to load data from Firestore:", error);
+    } catch (error) {
+      console.error("Failed to load task from localStorage:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Could not load your saved task.",
       });
+    } finally {
       setIsTaskLoading(false);
-    });
+    }
+  }, [toast]);
 
-    return () => unsubscribe();
-  }, [taskDocRef, toast, isUserLoading]);
-
-  // State Synchronization to Firestore
+  // State Synchronization to localStorage
   useEffect(() => {
-    if (!isTaskLoading && taskDocRef && currentTask) {
-      setDoc(taskDocRef, currentTask, { merge: true }).catch((error) => {
-        console.error("Failed to save task to Firestore:", error);
-        toast({
-          variant: "destructive",
-          title: "Error saving task",
-          description: "Your task could not be saved.",
-        });
+    if (isTaskLoading) return;
+    try {
+      // This comment clarifies that data is stored locally for privacy.
+      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const savedData = savedDataJson ? JSON.parse(savedDataJson) : {};
+      const newData = { ...savedData, currentTask };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+    } catch (error) {
+      console.error("Failed to save task to localStorage:", error);
+      toast({
+        variant: "destructive",
+        title: "Error saving task",
+        description: "Your task could not be saved.",
       });
     }
-  }, [currentTask, taskDocRef, isTaskLoading, toast]);
+  }, [currentTask, isTaskLoading, toast]);
 
 
   const handleCreateTask = async (data: { task: string }) => {
-    if (!taskDocRef) return;
-
     startGeneratingTransition(async () => {
       try {
         const result = await generateMicroWinSteps({ task: data.task });
@@ -105,7 +74,7 @@ export default function Home() {
           throw new Error("AI failed to generate steps.");
         }
         const newTask: Task = {
-          id: TASK_DOC_ID,
+          id: crypto.randomUUID(),
           mainTask: data.task,
           steps: result.steps.map((stepText) => ({
             id: crypto.randomUUID(),
@@ -197,28 +166,43 @@ export default function Home() {
     });
   };
 
-  const handleReset = async () => {
-    if (!currentTask || !taskDocRef || !historyCollectionRef) {
+  const handleReset = () => {
+    if (!currentTask) {
         setCurrentTask(null);
-        if(taskDocRef) await deleteDoc(taskDocRef);
         return;
     };
     
-    // 1. Archive the current task to history
-    const historyDoc = doc(historyCollectionRef, String(currentTask.createdAt));
-    await setDoc(historyDoc, currentTask);
+    try {
+        // 1. Get current history from localStorage
+        const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+        const savedData = savedDataJson ? JSON.parse(savedDataJson) : { history: [] };
+        const history = savedData.history || [];
 
-    // 2. Clear the current task
-    await deleteDoc(taskDocRef);
-    setCurrentTask(null);
+        // 2. Add current task to history
+        const updatedHistory = [...history, currentTask];
+        
+        // 3. Update localStorage with new history and cleared task
+        const newData = { ...savedData, history: updatedHistory, currentTask: null };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
 
-    toast({
-      title: "Task archived.",
-      description: "Ready for the next challenge!",
-    });
+        // 4. Clear the current task in component state
+        setCurrentTask(null);
+
+        toast({
+            title: "Task archived.",
+            description: "Ready for the next challenge!",
+        });
+    } catch (error) {
+        console.error("Failed to archive task:", error);
+        toast({
+            variant: "destructive",
+            title: "Error archiving task",
+            description: "Your task could not be archived.",
+        });
+    }
   };
 
-  if (isUserLoading || isTaskLoading) {
+  if (isTaskLoading) {
     return <PageSkeleton />;
   }
 
