@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles, Archive } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -209,7 +209,7 @@ export function TaskDisplay({
       </CardContent>
        <CardFooter className="flex flex-col-reverse sm:flex-row justify-end gap-4">
         <Button onClick={onReset}>
-            <Archive /> Archive & Start New
+            Archive & Start New
         </Button>
       </CardFooter>
     </Card>
