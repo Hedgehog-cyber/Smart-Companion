@@ -28,8 +28,8 @@ export function AppHeader() {
   const userInitial = user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U";
 
   return (
-    <header className="w-full max-w-4xl text-center relative">
-      <div className="flex items-center justify-center gap-3 mb-2">
+    <header className="w-full max-w-4xl relative text-left">
+      <div className="flex items-center justify-start gap-3 mb-2">
         <BrainCircuit className="w-10 h-10 text-primary-foreground bg-primary p-1.5 rounded-lg" />
         <h1 className="text-4xl md:text-5xl font-bold font-headline tracking-tight">
           Smart Companion

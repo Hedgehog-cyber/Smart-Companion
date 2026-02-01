@@ -96,7 +96,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-sm animate-fade-in">
+      <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Welcome Back</CardTitle>
           <CardDescription>

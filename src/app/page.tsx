@@ -5,29 +5,25 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, Step, SubStep } from "@/lib/types";
 import { generateMicroWinSteps } from "@/ai/flows/generate-micro-win-steps";
 import { breakDownFurther } from "@/ai/flows/break-down-further";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
 import { useRouter } from "next/navigation";
+import { collection, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+
 
 import { AppHeader } from "@/components/app-header";
 import { TaskInput } from "@/components/task-input";
 import { TaskDisplay } from "@/components/task-display";
 import { PageSkeleton } from "@/components/page-skeleton";
-import { DopamineCounter } from "@/components/dopamine-counter";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "@/components/sparkles";
 
-// Privacy Shield: All user task data is stored locally in the browser's
-// localStorage to comply with our Privacy-First hackathon requirement.
-// No data is sent to a server.
-const LOCAL_STORAGE_KEY = "smart_companion_tasks";
+const TASK_DOC_ID = "current_task";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
 
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const [taskHistory, setTaskHistory] = useState<Task[]>([]);
-  const [completedWins, setCompletedWins] = useState(0);
   const [isTaskLoading, setIsTaskLoading] = useState(true);
 
   const [isGenerating, startGeneratingTransition] = useTransition();
@@ -35,8 +31,15 @@ export default function Home() {
   const [breakingDownId, setBreakingDownId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [isAnimating, setIsAnimating] = useState(false);
-  const prevWinsRef = useRef(completedWins);
+  const taskDocRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, "users", user.uid, "tasks", TASK_DOC_ID) : null),
+    [firestore, user]
+  );
+  
+  const historyCollectionRef = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, "users", user.uid, "history") : null),
+    [firestore, user]
+  );
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -44,75 +47,57 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
-  // App Hydration: On initial mount, check for existing data in localStorage.
+  // App Hydration: On initial mount, subscribe to Firestore data.
   useEffect(() => {
+    if (!taskDocRef) {
+       setIsTaskLoading(isUserLoading); // Only loading if user is loading
+      return;
+    }
     setIsTaskLoading(true);
-    try {
-      const savedDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedDataJson) {
-        const { currentTask: savedTask, history: savedHistory } = JSON.parse(savedDataJson);
-        if (savedTask) {
-          setCurrentTask(savedTask);
+    const unsubscribe = onSnapshot(taskDocRef, (doc) => {
+      if (doc.exists()) {
+        const taskData = doc.data() as Task;
+        // Basic validation in case of empty/corrupt data
+        if (taskData.mainTask && taskData.steps) {
+            setCurrentTask(taskData);
+        } else {
+            setCurrentTask(null);
         }
-        if (savedHistory) {
-          setTaskHistory(savedHistory);
-        }
+      } else {
+        setCurrentTask(null);
       }
-    } catch (error) {
-      console.error("Failed to load data from localStorage:", error);
+      setIsTaskLoading(false);
+    }, (error) => {
+      console.error("Failed to load data from Firestore:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Could not load your saved task.",
       });
-    } finally {
       setIsTaskLoading(false);
-    }
-  }, [toast]);
+    });
 
-  // State Synchronization & Deep Persistence:
-  // This effect saves the state to localStorage whenever it changes.
+    return () => unsubscribe();
+  }, [taskDocRef, toast, isUserLoading]);
+
+  // State Synchronization to Firestore
   useEffect(() => {
-    if (!isTaskLoading) {
-      try {
-        const dataToSave = { currentTask, history: taskHistory };
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
-      } catch (error) {
-        console.error("Failed to save task to localStorage:", error);
+    if (!isTaskLoading && taskDocRef && currentTask) {
+      setDoc(taskDocRef, currentTask, { merge: true }).catch((error) => {
+        console.error("Failed to save task to Firestore:", error);
         toast({
           variant: "destructive",
           title: "Error saving task",
-          description: "Your task could not be saved to local storage.",
+          description: "Your task could not be saved.",
         });
-      }
+      });
     }
-  }, [currentTask, taskHistory, isTaskLoading, toast]);
-  
-  // Update dopamine counter when task changes
-  useEffect(() => {
-    if (currentTask) {
-      const totalWins = currentTask.steps.reduce((acc, step) => {
-        if (step.completed) acc++;
-        acc += step.subSteps.filter((sub) => sub.completed).length;
-        return acc;
-      }, 0);
-      setCompletedWins(totalWins);
-    } else {
-      setCompletedWins(0);
-    }
-  }, [currentTask]);
+  }, [currentTask, taskDocRef, isTaskLoading, toast]);
 
-
-  useEffect(() => {
-    if (completedWins > prevWinsRef.current) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 2000); // match max animation duration
-      return () => clearTimeout(timer);
-    }
-    prevWinsRef.current = completedWins;
-  }, [completedWins]);
 
   const handleCreateTask = async (data: { task: string }) => {
+    if (!taskDocRef) return;
+
     startGeneratingTransition(async () => {
       try {
         const result = await generateMicroWinSteps({ task: data.task });
@@ -120,7 +105,7 @@ export default function Home() {
           throw new Error("AI failed to generate steps.");
         }
         const newTask: Task = {
-          id: crypto.randomUUID(),
+          id: TASK_DOC_ID,
           mainTask: data.task,
           steps: result.steps.map((stepText) => ({
             id: crypto.randomUUID(),
@@ -145,14 +130,18 @@ export default function Home() {
 
   const handleToggleStep = (stepId: string) => {
     if (!currentTask) return;
+    const isCompleting = !currentTask.steps.find(s => s.id === stepId)?.completed;
     const updatedSteps = currentTask.steps.map((step) =>
-      step.id === stepId ? { ...step, completed: !step.completed } : step
+      step.id === stepId 
+        ? { ...step, completed: isCompleting, subSteps: step.subSteps.map(sub => ({...sub, completed: isCompleting})) } 
+        : step
     );
     setCurrentTask({ ...currentTask, steps: updatedSteps });
   };
 
   const handleToggleSubStep = (stepId: string, subStepId: string) => {
     if (!currentTask) return;
+    let parentStepCompleted = true;
     const updatedSteps = currentTask.steps.map((step) => {
       if (step.id === stepId) {
         const updatedSubSteps = step.subSteps.map((subStep) =>
@@ -160,7 +149,10 @@ export default function Home() {
             ? { ...subStep, completed: !subStep.completed }
             : subStep
         );
-        return { ...step, subSteps: updatedSubSteps };
+        
+        parentStepCompleted = updatedSubSteps.every(s => s.completed);
+
+        return { ...step, subSteps: updatedSubSteps, completed: parentStepCompleted };
       }
       return step;
     });
@@ -185,7 +177,8 @@ export default function Home() {
 
         const updatedSteps = currentTask.steps.map((s) =>
           s.id === step.id
-            ? { ...s, subSteps: [...s.subSteps, ...newSubSteps] }
+            // If sub-steps already exist, add to them. Otherwise, create them.
+            ? { ...s, subSteps: [...(s.subSteps || []), ...newSubSteps], completed: false }
             : s
         );
 
@@ -204,23 +197,21 @@ export default function Home() {
     });
   };
 
-  const handleClearCompleted = () => {
-    if (!currentTask) return;
-    const activeSteps = currentTask.steps
-      .map((step) => ({
-        ...step,
-        subSteps: step.subSteps.filter((sub) => !sub.completed),
-      }))
-      .filter((step) => !step.completed);
-
-    setCurrentTask({ ...currentTask, steps: activeSteps });
-    toast({ title: "Completed steps cleared!" });
-  };
-
   const handleReset = async () => {
-    if (!currentTask) return;
-    setTaskHistory(prev => [...prev, currentTask]);
+    if (!currentTask || !taskDocRef || !historyCollectionRef) {
+        setCurrentTask(null);
+        if(taskDocRef) await deleteDoc(taskDocRef);
+        return;
+    };
+    
+    // 1. Archive the current task to history
+    const historyDoc = doc(historyCollectionRef, String(currentTask.createdAt));
+    await setDoc(historyDoc, currentTask);
+
+    // 2. Clear the current task
+    await deleteDoc(taskDocRef);
     setCurrentTask(null);
+
     toast({
       title: "Task archived.",
       description: "Ready for the next challenge!",
@@ -237,10 +228,8 @@ export default function Home() {
         "flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20 transition-colors"
       )}
     >
-      {isAnimating && <Sparkles />}
       <AppHeader />
-      <DopamineCounter count={completedWins} />
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl mt-8">
         {!currentTask ? (
           <TaskInput onSubmit={handleCreateTask} isPending={isGenerating} />
         ) : (
@@ -249,7 +238,6 @@ export default function Home() {
             onToggleStep={handleToggleStep}
             onToggleSubStep={handleToggleSubStep}
             onBreakdown={handleBreakDown}
-            onClearCompleted={handleClearCompleted}
             onReset={handleReset}
             breakingDownId={isBreakingDown ? breakingDownId : null}
           />

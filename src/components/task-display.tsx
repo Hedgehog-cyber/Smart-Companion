@@ -1,6 +1,6 @@
 'use client';
 
-import type { Task, Step, SubStep } from '@/lib/types';
+import type { Task, Step } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles, Trash, Archive } from 'lucide-react';
+import { Loader2, Sparkles, Archive } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -20,240 +20,196 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Progress } from './ui/progress';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 type TaskDisplayProps = {
   task: Task;
   onToggleStep: (stepId: string) => void;
   onToggleSubStep: (stepId: string, subStepId: string) => void;
   onBreakdown: (step: Step) => void;
-  onClearCompleted: () => void;
   onReset: () => void;
   breakingDownId: string | null;
 };
 
+// A single item representing either a main step or a sub-step
 const StepItem = ({
   step,
   onToggleStep,
   onToggleSubStep,
   onBreakdown,
   isBreakingDown,
-  isOpen,
-  onOpenChange,
+  hasSubSteps,
+  isExpanded,
+  onExpand,
 }: {
   step: Step;
   onToggleStep: (id: string) => void;
   onToggleSubStep: (stepId: string, subStepId: string) => void;
   onBreakdown: (step: Step) => void;
   isBreakingDown: boolean;
-  isOpen: boolean;
-  onOpenChange: () => void;
+  hasSubSteps: boolean;
+  isExpanded: boolean;
+  onExpand: () => void;
 }) => {
-  const breakdownButton = (
-    <div className="flex flex-col items-center text-center">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onBreakdown(step)}
-        disabled={isBreakingDown || step.completed}
-        aria-label="Break this step down further"
-      >
-        {isBreakingDown ? (
-          <Loader2 className="animate-spin" />
-        ) : (
-          <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-        )}
-      </Button>
-      <p
-        className={cn(
-          'text-xs text-muted-foreground -mt-1',
-          (isBreakingDown || step.completed) && 'opacity-50'
-        )}
-      >
-        Still too hard?
-      </p>
-    </div>
-  );
+  const isStepCompleted = step.completed && step.subSteps.every(s => s.completed);
 
-  const content = (
-    <div className="flex items-start md:items-center gap-4">
+  const mainStepCheckbox = (
+    <div className="flex items-start gap-4">
       <Checkbox
         id={`step-${step.id}`}
-        checked={step.completed}
+        checked={isStepCompleted}
         onCheckedChange={() => onToggleStep(step.id)}
-        className="mt-1 md:mt-0"
+        className="mt-1"
       />
       <label
         htmlFor={`step-${step.id}`}
         className={cn(
-          'flex-1 text-base md:text-lg font-medium transition-colors cursor-pointer',
-          step.completed && 'line-through text-muted-foreground'
+          'flex-1 text-lg font-medium transition-colors cursor-pointer',
+          isStepCompleted && 'line-through text-muted-foreground'
         )}
       >
         {step.text}
       </label>
-      {breakdownButton}
     </div>
   );
 
-  if (step.subSteps.length === 0) {
-    return <div className="p-4 border rounded-lg bg-card">{content}</div>;
-  }
-
   return (
-    <Accordion
-      type="single"
-      collapsible
-      className="w-full border rounded-lg bg-card"
-      value={isOpen ? step.id : undefined}
-      onValueChange={onOpenChange}
-    >
-      <AccordionItem value={step.id} className="border-b-0">
-        <div className="flex items-start md:items-center p-4">
-          <Checkbox
-            id={`step-${step.id}`}
-            checked={step.completed}
-            onCheckedChange={() => onToggleStep(step.id)}
-            className="mt-1 md:mt-0"
-          />
-          <AccordionTrigger className="flex-1 p-0 ml-4 hover:no-underline text-left">
-            <span
-              className={cn(
-                'text-base md:text-lg font-medium transition-colors',
-                step.completed && 'line-through text-muted-foreground'
-              )}
-            >
-              {step.text}
-            </span>
-          </AccordionTrigger>
-        </div>
-        <AccordionContent className="px-4 pb-4">
-          <div className="space-y-3 pl-12 border-l-2 ml-2">
-            {step.subSteps.map((subStep) => (
-              <div key={subStep.id} className="flex items-center gap-4 pl-4">
-                <Checkbox
-                  id={`substep-${subStep.id}`}
-                  checked={subStep.completed}
-                  onCheckedChange={() => onToggleSubStep(step.id, subStep.id)}
-                />
-                <label
-                  htmlFor={`substep-${subStep.id}`}
-                  className={cn(
-                    'flex-1 text-sm font-medium transition-colors cursor-pointer',
-                    subStep.completed && 'line-through text-muted-foreground'
-                  )}
-                >
-                  {subStep.text}
-                </label>
-              </div>
-            ))}
-             <div className="pt-2 flex flex-col items-start">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onBreakdown(step)}
-                    disabled={isBreakingDown || step.completed}
-                    aria-label="Break this step down further"
-                >
-                    {isBreakingDown ? (
-                    <Loader2 className="animate-spin" />
-                    ) : (
-                    <Sparkles className="w-5 h-5 text-accent-foreground/80" />
-                    )}
-                </Button>
-                <p
-                    className={cn(
-                    'text-xs text-muted-foreground -mt-1',
-                    (isBreakingDown || step.completed) && 'opacity-50'
-                    )}
-                >
-                    Still too hard?
-                </p>
-            </div>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+    <div className={cn("p-6 border rounded-lg bg-card space-y-6", isStepCompleted && "bg-success")}>
+        {hasSubSteps ? (
+             <Accordion type="single" collapsible value={isExpanded ? "item-1" : ""} onValueChange={onExpand}>
+                <AccordionItem value="item-1" className="border-b-0">
+                    <AccordionTrigger className="p-0 hover:no-underline">{mainStepCheckbox}</AccordionTrigger>
+                    <AccordionContent className="pt-6">
+                        <div className="space-y-4 pl-12 border-l-2 ml-2">
+                         {step.subSteps.map(subStep => (
+                            <div key={subStep.id} className="flex items-center gap-4 pl-4">
+                                <Checkbox
+                                id={`substep-${subStep.id}`}
+                                checked={subStep.completed}
+                                onCheckedChange={() => onToggleSubStep(step.id, subStep.id)}
+                                />
+                                <label
+                                htmlFor={`substep-${subStep.id}`}
+                                className={cn(
+                                    'flex-1 text-sm font-medium transition-colors cursor-pointer',
+                                    subStep.completed && 'line-through text-muted-foreground'
+                                )}
+                                >
+                                {subStep.text}
+                                </label>
+                            </div>
+                         ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        ) : (
+            mainStepCheckbox
+        )}
+        
+      <div className="pl-10">
+        <Button
+          variant="ghost"
+          onClick={() => onBreakdown(step)}
+          disabled={isBreakingDown || isStepCompleted}
+          aria-label="Break this step down further"
+          className="gap-2"
+        >
+          {isBreakingDown ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <Sparkles className="w-5 h-5 text-accent-foreground/80" />
+          )}
+          Still too hard?
+        </Button>
+      </div>
+    </div>
   );
 };
+
 
 export function TaskDisplay({
   task,
   onToggleStep,
   onToggleSubStep,
   onBreakdown,
-  onClearCompleted,
   onReset,
   breakingDownId,
 }: TaskDisplayProps) {
-  const { progress, allStepsCount } = useMemo(() => {
+  const { progress, allStepsCount, completedStepsCount } = useMemo(() => {
     const allSteps = task.steps.flatMap((s) => [s, ...s.subSteps]);
-    const completedStepsCount = allSteps.filter((s) => s.completed).length;
+    const completedCount = allSteps.filter((s) => s.completed).length;
     return {
       progress:
         allSteps.length > 0
-          ? (completedStepsCount / allSteps.length) * 100
+          ? (completedCount / allSteps.length) * 100
           : 0,
       allStepsCount: allSteps.length,
+      completedStepsCount: completedCount,
     };
   }, [task]);
 
-  const [openAccordionIds, setOpenAccordionIds] = useState<string[]>([]);
+  const currentStep = useMemo(() => {
+    return task.steps.find(step => !step.completed || step.subSteps.some(sub => !sub.completed));
+  }, [task.steps]);
+  
+  const [isExpanded, setIsExpanded] = useState(false);
 
+  useEffect(() => {
+      // Automatically expand if sub-steps are added
+      if (currentStep && currentStep.subSteps.length > 0) {
+          setIsExpanded(true);
+      }
+      if (currentStep && currentStep.subSteps.length === 0) {
+        setIsExpanded(false);
+      }
+  }, [currentStep]);
+  
   const handleBreakdownWrapper = (step: Step) => {
     onBreakdown(step);
-    if (!openAccordionIds.includes(step.id)) {
-      setOpenAccordionIds((prev) => [...prev, step.id]);
-    }
+    setIsExpanded(true);
   };
-
-  const handleAccordionToggle = (stepId: string) => {
-    setOpenAccordionIds((prev) =>
-      prev.includes(stepId)
-        ? prev.filter((id) => id !== stepId)
-        : [...prev, stepId]
-    );
-  };
-
+  
   return (
-    <Card className="w-full animate-fade-in">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-2xl">{task.mainTask}</CardTitle>
+        <CardTitle className="text-3xl">{task.mainTask}</CardTitle>
         <CardDescription>
-          Here are your micro-wins. Check them off as you go!
+          {currentStep ? "Here is your next micro-win. Just focus on this one step." : "You've completed all the steps!"}
         </CardDescription>
         {allStepsCount > 0 && (
-          <div className="pt-2">
+          <div className="pt-4">
             <Progress value={progress} className="h-2" />
+            <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                <span>Progress</span>
+                <span>{completedStepsCount} / {allStepsCount}</span>
+            </div>
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
-        {task.steps.length > 0 ? (
-          task.steps.map((step) => (
-            <StepItem
-              key={step.id}
-              step={step}
-              onToggleStep={onToggleStep}
-              onToggleSubStep={onToggleSubStep}
-              onBreakdown={handleBreakdownWrapper}
-              isBreakingDown={breakingDownId === step.id}
-              isOpen={openAccordionIds.includes(step.id)}
-              onOpenChange={() => handleAccordionToggle(step.id)}
-            />
-          ))
+      <CardContent className="py-8">
+        {currentStep ? (
+          <StepItem
+            key={currentStep.id}
+            step={currentStep}
+            onToggleStep={onToggleStep}
+            onToggleSubStep={onToggleSubStep}
+            onBreakdown={handleBreakdownWrapper}
+            isBreakingDown={breakingDownId === currentStep.id}
+            hasSubSteps={currentStep.subSteps.length > 0}
+            isExpanded={isExpanded}
+            onExpand={() => setIsExpanded(v => !v)}
+          />
         ) : (
-          <p className="text-muted-foreground text-center py-8">
-            No steps yet. Looks like you're all done!
-          </p>
+          <div className="text-center text-muted-foreground p-8 space-y-4">
+            <p className="text-lg font-medium">Hooray! Task complete.</p>
+            <p>Ready for the next challenge?</p>
+          </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col-reverse sm:flex-row justify-end gap-2">
-        <Button variant="outline" onClick={onClearCompleted}>
-          <Trash /> Clear Completed
-        </Button>
-        <Button variant="destructive" onClick={onReset}>
-          <Archive /> Archive & Start New
+       <CardFooter className="flex flex-col-reverse sm:flex-row justify-end gap-4">
+        <Button onClick={onReset}>
+            <Archive /> Archive & Start New
         </Button>
       </CardFooter>
     </Card>

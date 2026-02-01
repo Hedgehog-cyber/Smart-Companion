@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Wand2, Mic, MicOff } from "lucide-react";
+import { Loader2, Wand2, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -57,12 +57,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast({
-        variant: "destructive",
-        title: "Speech Recognition Not Supported",
-        description: "Your browser does not support speech recognition.",
-      });
-      return;
+      return; // Silently fail if not supported
     }
 
     const recognition = new SpeechRecognition();
@@ -80,6 +75,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     };
 
     recognition.onerror = (event: any) => {
+      console.error("Speech Recognition Error", event);
       if (event.error === 'not-allowed') {
         toast({
           variant: 'destructive',
@@ -98,10 +94,13 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
-      form.setValue('task', transcript);
+      form.setValue('task', transcript, { shouldValidate: true });
       // Automatically submit the form
       setTimeout(() => {
-        formRef.current?.requestSubmit();
+        if (formRef.current) {
+            // A native submit is needed to trigger the form's onSubmit
+            formRef.current.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
       }, 100);
     };
 
@@ -110,18 +109,17 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     // Cleanup function to stop recognition if the component unmounts
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        recognitionRef.current.abort();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs only once
+  }, [form, toast]);
 
   const handleMicClick = () => {
     if (!recognitionRef.current) {
       toast({
         variant: 'destructive',
-        title: 'Speech Recognition Not Ready',
-        description: 'Please wait a moment and try again.',
+        title: 'Speech Recognition Not Supported',
+        description: 'Your browser does not support this feature.',
       });
       return;
     }
@@ -142,8 +140,9 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
     }
   };
 
+
   return (
-    <Card className="w-full animate-fade-in">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-2xl font-headline">What's on your mind?</CardTitle>
         <CardDescription>
@@ -170,7 +169,7 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
                 </FormItem>
               )}
             />
-            <div className="flex items-center justify-center gap-2">
+             <div className="flex justify-center items-center gap-4">
               <Button type="submit" disabled={isPending} className="flex-grow" size="lg">
                 {isPending ? (
                   <Loader2 className="animate-spin" />
@@ -181,21 +180,18 @@ export function TaskInput({ onSubmit, isPending }: TaskInputProps) {
               </Button>
               <Button 
                 type="button"
-                size="icon"
+                size="lg"
                 variant="outline"
                 onClick={handleMicClick}
                 disabled={isPending}
                 className={cn(
-                  'h-11 w-11',
-                  isListening && "bg-destructive/20 text-destructive animate-pulse"
+                  'transition-colors',
+                  isListening && "bg-destructive/20 text-destructive border-destructive/50"
                 )}
                 aria-label={isListening ? 'Stop listening' : 'Start listening'}
               >
-                {isListening ? (
-                   <MicOff className="h-5 w-5" />
-                ) : (
-                   <Mic className="h-5 w-5" />
-                )}
+                 <Mic className="h-5 w-5" />
+                 <span>{isListening ? 'Listening...' : 'Speak'}</span>
               </Button>
             </div>
           </form>
