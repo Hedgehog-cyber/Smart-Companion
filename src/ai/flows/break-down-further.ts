@@ -13,9 +13,9 @@ import {z} from 'genkit';
 
 const UserProfileSchema = z
   .object({
-    granularity_level: z.enum(['Normal', 'High']),
-    specific_triggers: z.string(),
-    preferred_support: z.string(),
+    task_granularity: z.string().describe("User's preference for task granularity. E.g., 'I need extra small steps for cleaning tasks'"),
+    sensory_triggers: z.string().describe("User's sensory triggers to avoid. E.g., 'Avoid mention of loud noises'"),
+    support_requirements: z.string().describe("User's specific support needs. E.g., 'I struggle with dense text, use bullet points only'"),
   })
   .optional();
 
@@ -52,11 +52,11 @@ const prompt = ai.definePrompt({
 This step was estimated to take {{{parentEstimatedMinutes}}} minutes.
 
 {{#if userProfile}}
-You are helping a specific user. Refer to their profile and adjust your breakdown to match their triggers and needed granularity level.
-User Profile:
-- Granularity Level: {{{userProfile.granularity_level}}}
-- Specific Triggers to be mindful of: {{{userProfile.specific_triggers}}}
-- Preferred Support Style: {{{userProfile.preferred_support}}}
+Note: You are helping a specific user. Refer to their profile and adjust your breakdown.
+User Profile Context:
+- Task Granularity Needs: "{{{userProfile.task_granularity}}}"
+- Sensory Triggers to Avoid: "{{{userProfile.sensory_triggers}}}"
+- Specific Support Requirements: "{{{userProfile.support_requirements}}}"
 {{/if}}
 
 Your task is to break this down into exactly 3 smaller, concrete, physical actions. For each new sub-step, you must provide a 'task_description' and an 'estimated_minutes'.

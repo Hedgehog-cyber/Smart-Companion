@@ -21,7 +21,7 @@ export interface Task {
 }
 
 export interface UserProfile {
-  granularity_level: 'Normal' | 'High';
-  specific_triggers: string;
-  preferred_support: string;
+  task_granularity: string;
+  sensory_triggers: string;
+  support_requirements: string;
 }

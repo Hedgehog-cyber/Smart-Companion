@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { playSuccessSound } from '@/lib/sounds';
 
 const LOCAL_STORAGE_KEY_TASKS = 'smart_companion_tasks';
-const LOCAL_STORAGE_KEY_PROFILE = 'smart_companion_profile';
+const LOCAL_STORAGE_KEY_PROFILE = 'user_neuro_profile';
 
 export default function Home() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
