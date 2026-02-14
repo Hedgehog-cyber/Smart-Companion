@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Task, Step, SubStep, UserProfile } from '@/lib/types';
 import { generateMicroWinSteps } from '@/ai/flows/generate-micro-win-steps';
@@ -131,12 +131,21 @@ export default function Home() {
     });
   };
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playSound = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0; // restart sound if already playing
+      audioRef.current.play();
+    }
+  };
+
   const handleToggleStep = (stepId: string) => {
     if (!currentTask) return;
     const isCompleting = !currentTask.steps.find(s => s.id === stepId)?.completed;
 
     if (isCompleting) {
       playSuccessSound();
+      playSound();
     }
 
     const updatedSteps = currentTask.steps.map(step =>
@@ -156,6 +165,7 @@ export default function Home() {
     // Play sound only when marking as complete
     if (subStep && !subStep.completed) {
       playSuccessSound();
+      playSound();
     }
 
     let parentStepCompleted = true;
@@ -265,6 +275,7 @@ export default function Home() {
 
   return (
     <main className={cn('flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 pt-12 md:pt-20 transition-colors')}>
+    <audio ref={audioRef} src="/successSound.mp3" preload="auto" />
       <AppHeader />
       <div className="w-full max-w-2xl mt-8">
         {!currentTask ? (
