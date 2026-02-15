@@ -6,17 +6,17 @@ Smart Companion is a neuro-inclusive executive function coach designed to help u
 
 - **Micro-Wins:** Large tasks are intimidating. We break them into physical, actionable steps that take only a few minutes.
 - **Neuro-Inclusive:** Built with ADHD and neurodivergence in mind. Features like customizable granularity help users who struggle with traditional productivity tools.
-- **Privacy-First:** User data, preferences, and task history are stored locally on your device. We use PII masking to ensure sensitive information never reaches the AI models.
+- **Privacy-First:** User data, preferences, and task history are stored locally. We use PII masking to ensure sensitive information never reaches the AI models.
 
 ##  Key Features
 
-- **AI Task Breakdown:** Instantly convert a vague goal into a step-by-step plan.
-- **"Still Too Hard?" (Recursive Breakdown):** Stuck on a step? The AI can break any individual step into even smaller sub-steps.
-- **Individualized Neuro-Profiles:** Define your granularity needs, sensory triggers, and preferred support style. The AI adapts its persona and output to match.
-- **Streaming Responses:** Near-instant feedback (<5s latency) using streaming AI generation.
-- **PII Masking:** Automatic detection and replacement of names, locations, and contact info before data leaves your device.
-- **Voice Input:** Use the built-in microphone to dictate your tasks.
-- **Task History:** Archive completed tasks and track your progress over time.
+- **AI Task Breakdown:** Instantly convert a vague goal into a step-by-step plan using Genkit and Gemini.
+- **"Still Too Hard?" (Recursive Breakdown):** Stuck on a step? The AI breaks individual steps into even smaller sub-steps with strict mathematical time constraints.
+- **Individualized Neuro-Profiles:** Define your granularity needs, sensory triggers, and preferred support style. The AI adapts its coaching persona in real-time.
+- **Streaming Responses:** Near-instant feedback using streaming AI generation to eliminate "waiting anxiety."
+- **PII Masking Layer:** Automatic detection and replacement of names, locations, and contact info before data leaves your device.
+- **Voice Input:** Use built-in speech recognition to dictate your tasks.
+- **Local Persistence:** Task history and profiles are saved to `localStorage`, ensuring data never leaves your device.
 
 ##  Tech Stack
 
@@ -25,7 +25,6 @@ Smart Companion is a neuro-inclusive executive function coach designed to help u
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) + [ShadCN UI](https://ui.shadcn.com/)
 - **Icons:** [Lucide React](https://lucide.dev/)
 - **Storage:** Local-first (localStorage) for user data and privacy.
-- **Language:** [TypeScript](https://www.typescriptlang.org/)
 
 ##  Project Structure
 
@@ -66,7 +65,7 @@ Open [http://localhost:9002](http://localhost:9002) with your browser to see the
 
 ## Docker
 
-You can also run Smart Companion as a containerized application.
+You can run Smart Companion as a containerized application for easier deployment.
 
 ### Build the Image
 
