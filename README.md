@@ -2,13 +2,13 @@
 
 Smart Companion is a neuro-inclusive executive function coach designed to help users overcome task paralysis. It uses Generative AI to break down overwhelming goals into manageable, low-friction "micro-wins," tailored to each user's specific neuro-profile.
 
-## 🧠 Core Philosophy
+##  Core Philosophy
 
 - **Micro-Wins:** Large tasks are intimidating. We break them into physical, actionable steps that take only a few minutes.
 - **Neuro-Inclusive:** Built with ADHD and neurodivergence in mind. Features like "Neuro-Buffers" and customizable granularity help users who struggle with traditional productivity tools.
 - **Privacy-First:** User data, preferences, and task history are stored locally on your device. We use PII masking to ensure sensitive information never reaches the AI models.
 
-## ✨ Key Features
+##  Key Features
 
 - **AI Task Breakdown:** Instantly convert a vague goal into a step-by-step plan.
 - **"Still Too Hard?" (Recursive Breakdown):** Stuck on a step? The AI can break any individual step into even smaller sub-steps.
@@ -18,7 +18,7 @@ Smart Companion is a neuro-inclusive executive function coach designed to help u
 - **Voice Input:** Use the built-in microphone to dictate your tasks.
 - **Task History:** Archive completed tasks and track your progress over time.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Framework:** [Next.js 15](https://nextjs.org/) (App Router)
 - **AI Engine:** [Genkit](https://firebase.google.com/docs/genkit) with [Google Gemini](https://ai.google.dev/)
@@ -27,7 +27,7 @@ Smart Companion is a neuro-inclusive executive function coach designed to help u
 - **Storage:** Local-first (localStorage) for user data and privacy.
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
 
-## 📁 Project Structure
+##  Project Structure
 
 ```text
 src/
@@ -43,7 +43,7 @@ src/
 └── hooks/              # Custom React hooks (toast, mobile detection)
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 First, install the dependencies:
 
@@ -62,7 +62,7 @@ npm run dev
 
 Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
 
-## 🔒 Privacy & Safety
+##  Privacy & Safety
 
 Smart Companion is designed to be a safe space.
 1. **Masking:** Before your task is sent to the LLM, names are replaced with `[NAME]`, addresses with `[LOCATION]`, and contact info with `[CONTACT]`.
@@ -70,5 +70,3 @@ Smart Companion is designed to be a safe space.
 3. **Safety Settings:** AI generation is configured with strict safety thresholds to prevent harmful content.
 
 ---
-
-Built with ❤️ for the neurodivergent community.
