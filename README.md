@@ -5,7 +5,7 @@ Smart Companion is a neuro-inclusive executive function coach designed to help u
 ##  Core Philosophy
 
 - **Micro-Wins:** Large tasks are intimidating. We break them into physical, actionable steps that take only a few minutes.
-- **Neuro-Inclusive:** Built with ADHD and neurodivergence in mind. Features like "Neuro-Buffers" and customizable granularity help users who struggle with traditional productivity tools.
+- **Neuro-Inclusive:** Built with ADHD and neurodivergence in mind. Features like customizable granularity help users who struggle with traditional productivity tools.
 - **Privacy-First:** User data, preferences, and task history are stored locally on your device. We use PII masking to ensure sensitive information never reaches the AI models.
 
 ##  Key Features
@@ -43,7 +43,9 @@ src/
 └── hooks/              # Custom React hooks (toast, mobile detection)
 ```
 
-##  Getting Started
+## Getting Started
+
+### Local Development
 
 First, install the dependencies:
 
@@ -62,7 +64,29 @@ npm run dev
 
 Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
 
-##  Privacy & Safety
+## Docker
+
+You can also run Smart Companion as a containerized application.
+
+### Build the Image
+
+Run the following command in the project root:
+
+```bash
+docker build -t smart-companion .
+```
+
+### Run the Container
+
+Start the container and map the internal port (3000) to a host port. Ensure you pass your environment variables:
+
+```bash
+docker run -p 3000:3000 --env-file .env smart-companion
+```
+
+The application will be accessible at [http://localhost:3000](http://localhost:3000).
+
+## Privacy & Safety
 
 Smart Companion is designed to be a safe space.
 1. **Masking:** Before your task is sent to the LLM, names are replaced with `[NAME]`, addresses with `[LOCATION]`, and contact info with `[CONTACT]`.
